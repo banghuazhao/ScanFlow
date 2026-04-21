@@ -5,6 +5,7 @@
 
 import PhotosUI
 import SwiftUI
+import UIKit
 
 enum CreateEditorMode {
   case new
@@ -56,6 +57,7 @@ struct CreateCodeEditorView: View {
         .disabled(isEdit)
       }
       contentSection
+      previewSection
       Section("Appearance") {
         TextField("Foreground (#RRGGBB)", text: $style.foregroundHex)
           .textInputAutocapitalization(.never)
@@ -113,6 +115,96 @@ struct CreateCodeEditorView: View {
   private var isEdit: Bool {
     if case .edit = mode { return true }
     return false
+  }
+
+  @ViewBuilder
+  private var previewSection: some View {
+    Section {
+      if let image = makePreviewImage() {
+        Image(uiImage: image)
+          .resizable()
+          .interpolation(.none)
+          .scaledToFit()
+          .frame(maxHeight: 220)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 4)
+      } else {
+        ContentUnavailableView(
+          "No preview",
+          systemImage: "qrcode",
+          description: Text("Enter content above to generate a preview.")
+        )
+        .frame(maxHeight: 160)
+      }
+      if builtPayload().isEmpty {
+        Text("Sample data is shown until your code content is complete.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    } header: {
+      Text("Preview")
+    }
+  }
+
+  /// Payload as it will be saved; empty if required fields are missing.
+  private func builtPayload() -> String {
+    CodePayloadBuilder.payload(
+      kind: kind,
+      phone: phone,
+      web: web,
+      emailAddress: emailAddress,
+      emailSubject: emailSubject,
+      emailBody: emailBody,
+      smsNumber: smsNumber,
+      smsBody: smsBody,
+      contactName: contactName,
+      contactPhone: contactPhone,
+      contactEmail: contactEmail,
+      eventTitle: eventTitle,
+      eventLocation: eventLocation,
+      eventStart: eventStart,
+      eventEnd: eventEnd,
+      wifiSSID: wifiSSID,
+      wifiPassword: wifiPassword,
+      wifiSecurity: wifiSecurity,
+      plainText: plainText,
+      latitude: latitude,
+      longitude: longitude,
+      barcodeText: barcodeText,
+      socialURL: socialURL
+    )
+  }
+
+  private func makePreviewImage() -> UIImage? {
+    let real = builtPayload()
+    let payload = previewPayload(forReal: real)
+    let centerUIImage = centerImageData.flatMap { UIImage(data: $0) }
+    switch kind {
+    case .barcode:
+      return QRBarcodeImageGenerator.linearBarcodeUIImage(
+        payload: payload,
+        style: style,
+        size: CGSize(width: 480, height: 180)
+      )
+    default:
+      return QRBarcodeImageGenerator.qrUIImage(
+        payload: payload,
+        style: style,
+        centerImage: centerUIImage,
+        size: 320
+      )
+    }
+  }
+
+  /// When fields are incomplete, still render a preview using neutral sample strings.
+  private func previewPayload(forReal real: String) -> String {
+    if !real.isEmpty { return real }
+    switch kind {
+    case .barcode:
+      return "PREVIEW"
+    default:
+      return "https://scanflow.app/preview"
+    }
   }
 
   @ViewBuilder
@@ -268,31 +360,7 @@ struct CreateCodeEditorView: View {
   }
 
   private func save() {
-    let payload = CodePayloadBuilder.payload(
-      kind: kind,
-      phone: phone,
-      web: web,
-      emailAddress: emailAddress,
-      emailSubject: emailSubject,
-      emailBody: emailBody,
-      smsNumber: smsNumber,
-      smsBody: smsBody,
-      contactName: contactName,
-      contactPhone: contactPhone,
-      contactEmail: contactEmail,
-      eventTitle: eventTitle,
-      eventLocation: eventLocation,
-      eventStart: eventStart,
-      eventEnd: eventEnd,
-      wifiSSID: wifiSSID,
-      wifiPassword: wifiPassword,
-      wifiSecurity: wifiSecurity,
-      plainText: plainText,
-      latitude: latitude,
-      longitude: longitude,
-      barcodeText: barcodeText,
-      socialURL: socialURL
-    )
+    let payload = builtPayload()
     guard !payload.isEmpty else { return }
     let label = CodePayloadBuilder.defaultLabel(kind: kind, payload: payload)
     let center: Data?
