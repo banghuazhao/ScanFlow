@@ -6,12 +6,14 @@
 import AVFoundation
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct ScanView: View {
   @Bindable var model: ScanViewModel
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
   @State private var photoItem: PhotosPickerItem?
   @State private var photoLoadError = false
+  @State private var scanMode: ScanSessionMode = .single
 
   var body: some View {
     ZStack {
@@ -21,30 +23,66 @@ struct ScanView: View {
           systemImage: "camera.fill",
           description: Text("Allow camera access in Settings to scan codes.")
         )
+        .scanflowScreenBackground()
       } else {
         BarcodeScannerView(isTorchOn: model.isTorchOn) { value, type in
+          guard scanMode == .single else { return }
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .ignoresSafeArea()
 
-        VStack {
-          HStack {
-            Spacer()
-            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
-              Label("Import", systemImage: "photo.on.rectangle")
-                .padding(10)
-                .background(.ultraThinMaterial, in: Capsule())
-            }
-            Button {
+        ScanViewfinderOverlay()
+
+        VStack(spacing: 0) {
+          HStack(spacing: 16) {
+            GlassCircleButton(
+              systemName: model.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill",
+              isActive: model.isTorchOn
+            ) {
               model.isTorchOn.toggle()
-            } label: {
-              Image(systemName: model.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill")
-                .padding(10)
-                .background(.ultraThinMaterial, in: Circle())
+              Haptics.light(enabled: hapticsEnabled)
             }
+
+            Spacer()
+
+            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+              Image(systemName: "photo.on.rectangle")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 48, height: 48)
+                .background {
+                  Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                      Circle()
+                        .strokeBorder(.white.opacity(0.22), lineWidth: 1)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
           }
-          .padding()
-          Spacer()
+          .padding(.horizontal, 20)
+          .padding(.top, 12)
+
+          Text("Scanner")
+            .font(.system(size: 34, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
+            .padding(.top, 4)
+
+          Spacer(minLength: 0)
+
+          Text("Scan a QR code or barcode")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.92))
+            .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+            .padding(.bottom, 12)
+
+          Spacer(minLength: 120)
+
+          scanModePicker
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
         }
       }
     }
@@ -69,6 +107,24 @@ struct ScanView: View {
           )
         }
       }
+    }
+  }
+
+  private var scanModePicker: some View {
+    Picker("Mode", selection: $scanMode) {
+      Text("Single").tag(ScanSessionMode.single)
+      Text("Batch").tag(ScanSessionMode.batch)
+    }
+    .pickerStyle(.segmented)
+    .padding(6)
+    .background {
+      RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+        .fill(.ultraThinMaterial)
+        .overlay {
+          RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+            .strokeBorder(.white.opacity(0.18), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
     }
   }
 

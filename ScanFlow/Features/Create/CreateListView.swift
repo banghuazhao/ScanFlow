@@ -5,25 +5,42 @@
 
 import SwiftUI
 
+private enum CreateRoute: Hashable {
+  case typePicker
+  case codeDetail(CreatedCodeRecord)
+}
+
 struct CreateListView: View {
   @State private var model = CreateViewModel()
+  @State private var path = NavigationPath()
   @State private var showEditor = false
+  @State private var seedKind: CreatedCodeKind?
+  @State private var seedSocialURL: String?
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $path) {
       Group {
         if model.codes.isEmpty {
           ContentUnavailableView(
             "No codes yet",
             systemImage: "qrcode",
-            description: Text("Tap + to create a QR code or barcode.")
+            description: Text("Tap + to choose a type and create a code.")
           )
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
           List {
             ForEach(model.codes) { record in
-              NavigationLink(value: record) {
-                CreatedCodeRow(record: record)
+              NavigationLink(value: CreateRoute.codeDetail(record)) {
+                CreatedCodeGlassRow(record: record)
               }
+              .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+              .listRowSeparator(.hidden)
+              .listRowBackground(
+                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                  .fill(.ultraThinMaterial)
+                  .shadow(color: .black.opacity(0.07), radius: 10, y: 4)
+                  .padding(.vertical, 4)
+              )
             }
             .onDelete { indexSet in
               for index in indexSet {
@@ -31,27 +48,51 @@ struct CreateListView: View {
               }
             }
           }
+          .listStyle(.plain)
+          .scrollContentBackground(.hidden)
         }
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .scanflowScreenBackground()
       .navigationTitle("Create")
+      .navigationBarTitleDisplayMode(.large)
       .toolbar {
         ToolbarItem(placement: .primaryAction) {
           Button {
-            showEditor = true
+            path.append(CreateRoute.typePicker)
           } label: {
             Image(systemName: "plus")
+              .font(.system(size: 20, weight: .semibold))
           }
         }
       }
-      .navigationDestination(for: CreatedCodeRecord.self) { record in
-        CreatedCodeDetailView(record: record, model: model)
+      .navigationDestination(for: CreateRoute.self) { route in
+        switch route {
+        case .typePicker:
+          CreateTypePickerView { kind, social in
+            if path.count > 0 {
+              path.removeLast()
+            }
+            seedKind = kind
+            seedSocialURL = social
+            showEditor = true
+          }
+        case .codeDetail(let record):
+          CreatedCodeDetailView(record: record, model: model)
+        }
       }
       .sheet(isPresented: $showEditor) {
         NavigationStack {
           CreateCodeEditorView(
             model: model,
             mode: .new,
-            onFinished: { showEditor = false }
+            seedKind: seedKind,
+            seedSocialURL: seedSocialURL,
+            onFinished: {
+              showEditor = false
+              seedKind = nil
+              seedSocialURL = nil
+            }
           )
         }
       }
@@ -59,21 +100,25 @@ struct CreateListView: View {
   }
 }
 
-private struct CreatedCodeRow: View {
+private struct CreatedCodeGlassRow: View {
   let record: CreatedCodeRecord
 
   var body: some View {
-    HStack(spacing: 12) {
-      Image(systemName: record.kind == .barcode ? "barcode" : "qrcode")
-        .foregroundStyle(.secondary)
-        .frame(width: 32, height: 32)
+    HStack(spacing: 14) {
+      GradientIconBadge(systemName: record.kind == .barcode ? "barcode" : "qrcode", size: 44)
       VStack(alignment: .leading, spacing: 4) {
         Text(record.displayLabel)
+          .font(.body.weight(.semibold))
           .lineLimit(1)
         Text(record.kind.title)
-          .font(.caption)
+          .font(.subheadline)
           .foregroundStyle(.secondary)
       }
+      Spacer()
+      Image(systemName: "chevron.right")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.tertiary)
     }
+    .padding(.vertical, 6)
   }
 }

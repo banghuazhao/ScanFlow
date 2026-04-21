@@ -13,7 +13,7 @@ struct MainTabView: View {
   var body: some View {
     TabView(selection: $tab) {
       ScanView(model: scanModel)
-        .tabItem { Label("Scan", systemImage: "viewfinder") }
+        .tabItem { Label("Scan", systemImage: "barcode.viewfinder") }
         .tag(0)
 
       HistoryView()
@@ -21,13 +21,14 @@ struct MainTabView: View {
         .tag(1)
 
       CreateListView()
-        .tabItem { Label("Create", systemImage: "qrcode") }
+        .tabItem { Label("Create", systemImage: "plus.viewfinder") }
         .tag(2)
 
       SettingsView()
         .tabItem { Label("Settings", systemImage: "gearshape") }
         .tag(3)
     }
+    .modifier(TabBarGlassModifier())
     .onAppear {
       if startWithCamera {
         tab = 0

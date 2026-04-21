@@ -4,10 +4,26 @@
 //
 
 import SwiftUI
+import UIKit
+
+private enum HistorySort: String, CaseIterable {
+  case newest
+  case oldest
+  case alphabetical
+
+  var title: String {
+    switch self {
+    case .newest: "Newest first"
+    case .oldest: "Oldest first"
+    case .alphabetical: "A to Z"
+    }
+  }
+}
 
 struct HistoryView: View {
   @State private var model = HistoryViewModel()
   @State private var search = ""
+  @State private var sort: HistorySort = .newest
 
   private var filtered: [ScanRecord] {
     let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -19,28 +35,76 @@ struct HistoryView: View {
     }
   }
 
+  private var displayed: [ScanRecord] {
+    var base = filtered
+    switch sort {
+    case .newest:
+      base.sort { $0.createdAt > $1.createdAt }
+    case .oldest:
+      base.sort { $0.createdAt < $1.createdAt }
+    case .alphabetical:
+      base.sort {
+        ($0.title ?? $0.rawValue).localizedCaseInsensitiveCompare($1.title ?? $1.rawValue) == .orderedAscending
+      }
+    }
+    return base
+  }
+
   var body: some View {
     NavigationStack {
       Group {
         if model.scans.isEmpty {
-          ContentUnavailableView("No scans yet", systemImage: "clock", description: Text("Codes you scan appear here."))
+          ContentUnavailableView(
+            "No scans yet",
+            systemImage: "clock",
+            description: Text("Codes you scan appear here.")
+          )
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
           List {
-            ForEach(filtered) { record in
+            ForEach(displayed) { record in
               NavigationLink(value: record) {
-                HistoryRow(record: record)
+                HistoryGlassRow(record: record)
               }
+              .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+              .listRowSeparator(.hidden)
+              .listRowBackground(
+                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                  .fill(.ultraThinMaterial)
+                  .shadow(color: .black.opacity(0.07), radius: 10, y: 4)
+                  .padding(.vertical, 4)
+              )
             }
             .onDelete { indexSet in
               for index in indexSet {
-                model.delete(filtered[index])
+                model.delete(displayed[index])
               }
             }
           }
-          .searchable(text: $search, prompt: "Search scans")
+          .listStyle(.plain)
+          .scrollContentBackground(.hidden)
+          .searchable(text: $search, prompt: "Search codes…")
         }
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .scanflowScreenBackground()
       .navigationTitle("History")
+      .navigationBarTitleDisplayMode(.large)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu {
+            Picker("Sort", selection: $sort) {
+              ForEach(HistorySort.allCases, id: \.self) { option in
+                Text(option.title).tag(option)
+              }
+            }
+          } label: {
+            Image(systemName: "arrow.up.arrow.down.circle")
+              .font(.system(size: 20, weight: .medium))
+              .symbolRenderingMode(.hierarchical)
+          }
+        }
+      }
       .navigationDestination(for: ScanRecord.self) { record in
         HistoryRecordDetail(record: record, model: model)
       }
@@ -68,22 +132,26 @@ private struct HistoryRecordDetail: View {
   }
 }
 
-private struct HistoryRow: View {
+private struct HistoryGlassRow: View {
   let record: ScanRecord
 
   var body: some View {
-    HStack(spacing: 12) {
-      Image(systemName: SymbologyDisplay.iconName(record.symbology))
-        .font(.title2)
-        .foregroundStyle(.secondary)
-        .frame(width: 36, height: 36)
+    HStack(spacing: 14) {
+      GradientIconBadge(systemName: SymbologyDisplay.iconName(record.symbology), size: 48)
       VStack(alignment: .leading, spacing: 4) {
         Text(record.title ?? record.rawValue)
+          .font(.body.weight(.semibold))
+          .foregroundStyle(.primary)
           .lineLimit(1)
         Text(SymbologyDisplay.friendlyName(record.symbology))
-          .font(.caption)
+          .font(.subheadline)
           .foregroundStyle(.secondary)
       }
+      Spacer(minLength: 8)
+      Image(systemName: "ellipsis.circle")
+        .font(.system(size: 22))
+        .foregroundStyle(.tertiary)
     }
+    .padding(.vertical, 6)
   }
 }

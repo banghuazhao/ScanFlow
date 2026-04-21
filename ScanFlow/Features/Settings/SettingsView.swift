@@ -26,6 +26,8 @@ struct SettingsView: View {
           Text("Removes scan history and created codes from this device.")
         }
       }
+      .scrollContentBackground(.hidden)
+      .scanflowScreenBackground()
       .navigationTitle("Settings")
       .confirmationDialog(
         "Delete all data?",

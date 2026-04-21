@@ -14,43 +14,145 @@ struct ScanResultDetailView: View {
   var onDismiss: () -> Void
   var onDelete: (() -> Void)? = nil
 
+  @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
   @State private var showShare = false
   @State private var shareItems: [Any] = []
 
   var body: some View {
-    List {
-      Section {
-        if let previewImage {
-          Image(uiImage: previewImage)
-            .resizable()
-            .interpolation(.none)
-            .scaledToFit()
-            .frame(maxHeight: 220)
-            .frame(maxWidth: .infinity)
-        }
+    ScrollView {
+      VStack(spacing: 0) {
+        headerSection
+        contentSection
       }
-      Section("Type") {
-        Text(SymbologyDisplay.friendlyName(symbology))
-      }
-      Section("Value") {
-        Text(rawValue)
-          .textSelection(.enabled)
-      }
-      if ProductLookup.productSearchURL(for: rawValue) != nil {
-        Section {
-          if let url = ProductLookup.productSearchURL(for: rawValue) {
-            Link("Find product", destination: url)
+    }
+    .background(Color(.systemGroupedBackground))
+    .navigationTitle("Scan")
+    .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      if showDismissButton {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(action: onDismiss) {
+            Image(systemName: "xmark")
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(.white)
+              .frame(width: 34, height: 34)
+              .background(Circle().fill(.ultraThinMaterial))
           }
         }
       }
-      Section {
-        Button("Open") {
+    }
+    .toolbarBackground(.hidden, for: .navigationBar)
+    .toolbarColorScheme(.dark, for: .navigationBar)
+    .sheet(isPresented: $showShare) {
+      ShareSheet(items: shareItems)
+    }
+  }
+
+  private var headerSection: some View {
+    ZStack {
+      LiquidGlass.headerGradient
+      VStack(spacing: 18) {
+        Text(headerTitle)
+          .font(.headline.weight(.bold))
+          .foregroundStyle(.white)
+          .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+          .padding(.top, 4)
+
+        Group {
+          if let previewImage {
+            Image(uiImage: previewImage)
+              .resizable()
+              .interpolation(.none)
+              .scaledToFit()
+              .padding(18)
+              .frame(maxWidth: 260, maxHeight: 260)
+              .background {
+                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                  .fill(Color.white)
+                  .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
+              }
+          } else {
+            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium)
+              .fill(Color.white.opacity(0.2))
+              .frame(width: 200, height: 200)
+              .overlay {
+                Image(systemName: "qrcode")
+                  .font(.largeTitle)
+                  .foregroundStyle(.white.opacity(0.8))
+              }
+          }
+        }
+      }
+      .padding(.horizontal, 20)
+      .padding(.bottom, 28)
+    }
+  }
+
+  private var headerTitle: String {
+    let t = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    if t.count > 28 { return String(t.prefix(25)) + "…" }
+    return t.isEmpty ? "Scan" : t
+  }
+
+  private var contentSection: some View {
+    VStack(spacing: 16) {
+      GlassCard {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Type")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+          Text(SymbologyDisplay.friendlyName(symbology))
+            .font(.body.weight(.medium))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      GlassCard {
+        HStack(alignment: .top) {
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Value")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(.secondary)
+            Text(rawValue)
+              .font(.body.weight(.semibold))
+              .textSelection(.enabled)
+          }
+          Spacer()
+          Button {
+            UIPasteboard.general.string = rawValue
+            Haptics.light(enabled: hapticsEnabled)
+          } label: {
+            Image(systemName: "doc.on.doc")
+              .font(.system(size: 18, weight: .medium))
+              .foregroundStyle(.blue)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+
+      if ProductLookup.productSearchURL(for: rawValue) != nil, let url = ProductLookup.productSearchURL(for: rawValue) {
+        Link(destination: url) {
+          GlassCard(padding: 14) {
+            HStack {
+              Image(systemName: "cart.fill")
+                .foregroundStyle(.blue)
+              Text("Find product")
+                .font(.body.weight(.semibold))
+              Spacer()
+              Image(systemName: "arrow.up.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.tertiary)
+            }
+          }
+        }
+        .buttonStyle(.plain)
+      }
+
+      HStack(spacing: 12) {
+        actionPill(title: "Open", systemName: "arrow.up.right.circle.fill", role: nil) {
           openValue()
         }
-        Button("Copy") {
-          UIPasteboard.general.string = rawValue
-        }
-        Button("Share…") {
+        actionPill(title: "Share", systemName: "square.and.arrow.up", role: nil) {
           if let img = previewImage ?? synthesizedImage() {
             shareItems = [rawValue, img]
           } else {
@@ -59,24 +161,56 @@ struct ScanResultDetailView: View {
           showShare = true
         }
       }
+
       if let onDelete {
-        Section {
-          Button("Delete", role: .destructive, action: onDelete)
+        Button(role: .destructive, action: onDelete) {
+          Text("Delete")
+            .font(.body.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background {
+              RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                .fill(Color.red.opacity(0.12))
+            }
         }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
       }
     }
-    .navigationTitle("Scan")
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      if showDismissButton {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Done", action: onDismiss)
-        }
+    .padding(16)
+    .padding(.top, 8)
+    .background {
+      UnevenRoundedRectangle(
+        cornerRadii: RectangleCornerRadii(
+          topLeading: LiquidGlass.cornerLarge,
+          bottomLeading: 0,
+          bottomTrailing: 0,
+          topTrailing: LiquidGlass.cornerLarge
+        ),
+        style: .continuous
+      )
+      .fill(Color(.systemGroupedBackground))
+      .shadow(color: .black.opacity(0.06), radius: 16, y: -4)
+    }
+    .offset(y: -12)
+  }
+
+  private func actionPill(title: String, systemName: String, role: ButtonRole?, action: @escaping () -> Void) -> some View {
+    Button(role: role, action: action) {
+      HStack(spacing: 8) {
+        Image(systemName: systemName)
+        Text(title)
+          .font(.body.weight(.semibold))
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 14)
+      .background {
+        RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+          .fill(.ultraThinMaterial)
+          .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
       }
     }
-    .sheet(isPresented: $showShare) {
-      ShareSheet(items: shareItems)
-    }
+    .buttonStyle(.plain)
   }
 
   private func synthesizedImage() -> UIImage? {

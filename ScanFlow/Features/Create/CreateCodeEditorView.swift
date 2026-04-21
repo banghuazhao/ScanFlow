@@ -16,6 +16,10 @@ struct CreateCodeEditorView: View {
   @Environment(\.dismiss) private var dismiss
   let model: CreateViewModel
   let mode: CreateEditorMode
+  /// Pre-select kind when creating from the hub (ignored for edit).
+  var seedKind: CreatedCodeKind? = nil
+  /// Pre-fill social URL for branded shortcuts from the hub.
+  var seedSocialURL: String? = nil
   let onFinished: () -> Void
 
   @State private var kind: CreatedCodeKind = .text
@@ -85,6 +89,8 @@ struct CreateCodeEditorView: View {
         }
       }
     }
+    .scrollContentBackground(.hidden)
+    .scanflowScreenBackground()
     .navigationTitle(isEdit ? "Edit code" : "New code")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -288,11 +294,20 @@ struct CreateCodeEditorView: View {
   }
 
   private func load() {
-    guard case .edit(let record) = mode else { return }
-    kind = record.kind
-    style = CodeStyleConfiguration.decode(from: record.styleJSON)
-    centerImageData = record.centerImageData
-    splitPayload(record)
+    switch mode {
+    case .new:
+      if let url = seedSocialURL, !url.isEmpty {
+        kind = .social
+        socialURL = url
+      } else if let s = seedKind {
+        kind = s
+      }
+    case .edit(let record):
+      kind = record.kind
+      style = CodeStyleConfiguration.decode(from: record.styleJSON)
+      centerImageData = record.centerImageData
+      splitPayload(record)
+    }
   }
 
   private func splitPayload(_ record: CreatedCodeRecord) {
