@@ -5,11 +5,6 @@
 
 import SwiftUI
 
-enum ScanSessionMode: String, CaseIterable {
-  case single
-  case batch
-}
-
 /// Full-screen dimming with a clear rounded “window” and white corner brackets.
 struct ScanViewfinderOverlay: View {
   var body: some View {
@@ -21,6 +16,7 @@ struct ScanViewfinderOverlay: View {
         ZStack {
           Rectangle()
             .fill(Color.black.opacity(0.42))
+            .ignoresSafeArea()
           RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
             .frame(width: side, height: side)
             .position(center)
@@ -42,35 +38,47 @@ private struct ViewfinderCornerBrackets: View {
   var arm: CGFloat
   var lineWidth: CGFloat
 
+  private var stroke: StrokeStyle {
+    var s = StrokeStyle()
+    s.lineWidth = lineWidth
+    s.lineCap = .round
+    s.lineJoin = .round
+    s.miterLimit = 2
+    return s
+  }
+
   var body: some View {
     Canvas { context, _ in
       let w = side
-      let a = arm
-      let lw = lineWidth
+      let a = min(arm, w * 0.48)
+      let stroke = self.stroke
+      let white = Color.white
 
+      // True L at each window corner: the inner 90° is a smooth fillet from `lineJoin: .round`;
+      // arm ends use `lineCap: .round` (no ad‑hoc arcs, which were easy to get wrong in Y-down space).
       var tl = Path()
       tl.move(to: CGPoint(x: 0, y: a))
       tl.addLine(to: CGPoint(x: 0, y: 0))
       tl.addLine(to: CGPoint(x: a, y: 0))
-      context.stroke(tl, with: .color(.white), lineWidth: lw)
+      context.stroke(tl, with: .color(white), style: stroke)
 
       var tr = Path()
       tr.move(to: CGPoint(x: w - a, y: 0))
       tr.addLine(to: CGPoint(x: w, y: 0))
       tr.addLine(to: CGPoint(x: w, y: a))
-      context.stroke(tr, with: .color(.white), lineWidth: lw)
+      context.stroke(tr, with: .color(white), style: stroke)
 
       var br = Path()
       br.move(to: CGPoint(x: w, y: w - a))
       br.addLine(to: CGPoint(x: w, y: w))
       br.addLine(to: CGPoint(x: w - a, y: w))
-      context.stroke(br, with: .color(.white), lineWidth: lw)
+      context.stroke(br, with: .color(white), style: stroke)
 
       var bl = Path()
       bl.move(to: CGPoint(x: a, y: w))
       bl.addLine(to: CGPoint(x: 0, y: w))
       bl.addLine(to: CGPoint(x: 0, y: w - a))
-      context.stroke(bl, with: .color(.white), lineWidth: lw)
+      context.stroke(bl, with: .color(white), style: stroke)
     }
     .frame(width: side, height: side)
     .shadow(color: .black.opacity(0.35), radius: 2, y: 1)

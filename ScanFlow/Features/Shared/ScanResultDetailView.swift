@@ -7,251 +7,269 @@ import SwiftUI
 import UIKit
 
 struct ScanResultDetailView: View {
-  var showDismissButton: Bool = true
-  let symbology: String
-  let rawValue: String
-  let previewImage: UIImage?
-  var onDismiss: () -> Void
-  var onDelete: (() -> Void)? = nil
+    var showDismissButton: Bool = true
+    let symbology: String
+    let rawValue: String
+    let previewImage: UIImage?
+    var onDismiss: () -> Void
+    var onDelete: (() -> Void)? = nil
 
-  @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
-  @State private var showShare = false
-  @State private var shareItems: [Any] = []
+    @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
+    @State private var showShare = false
+    @State private var shareItems: [Any] = []
+    @State private var showCopiedToast = false
 
-  var body: some View {
-    ScrollView {
-      VStack(spacing: 0) {
-        headerSection
-        contentSection
-      }
-    }
-    .background(Color(.systemGroupedBackground))
-    .navigationTitle("Scan")
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      if showDismissButton {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(action: onDismiss) {
-            Image(systemName: "xmark")
-              .font(.system(size: 15, weight: .semibold))
-              .foregroundStyle(.primary)
-              .frame(width: 34, height: 34)
-              .glassEffect(.regular, in: Circle())
-          }
-        }
-      }
-    }
-    .toolbarBackground(.visible, for: .navigationBar)
-    .sheet(isPresented: $showShare) {
-      ShareSheet(items: shareItems)
-    }
-  }
-
-  private var headerSection: some View {
-    VStack(spacing: 18) {
-      Text(headerTitle)
-        .font(.headline.weight(.bold))
-        .foregroundStyle(.primary)
-        .padding(.top, 4)
-
-      Group {
-        if let previewImage {
-          Image(uiImage: previewImage)
-            .resizable()
-            .interpolation(.none)
-            .scaledToFit()
-            .padding(18)
-            .frame(maxWidth: 260, maxHeight: 260)
-            .background {
-              RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                headerSection
+                contentSection
             }
-        } else {
-          Image(systemName: "qrcode")
-            .font(.system(size: 72))
-            .foregroundStyle(.secondary)
-            .frame(width: 200, height: 200)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
         }
-      }
-    }
-    .padding(.horizontal, 20)
-    .padding(.bottom, 28)
-    .frame(maxWidth: .infinity)
-    .background(.regularMaterial)
-  }
-
-  private var headerTitle: String {
-    let t = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-    if t.count > 28 { return String(t.prefix(25)) + "…" }
-    return t.isEmpty ? "Scan" : t
-  }
-
-  private var contentSection: some View {
-    VStack(spacing: 16) {
-      GlassCard {
-        VStack(alignment: .leading, spacing: 8) {
-          Text("Type")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-          Text(SymbologyDisplay.friendlyName(symbology))
-            .font(.body.weight(.medium))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
-
-      GlassCard {
-        HStack(alignment: .top) {
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Value")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.secondary)
-            Text(rawValue)
-              .font(.body.weight(.semibold))
-              .textSelection(.enabled)
-          }
-          Spacer()
-          Button {
-            UIPasteboard.general.string = rawValue
-            Haptics.light(enabled: hapticsEnabled)
-          } label: {
-            Image(systemName: "doc.on.doc")
-              .font(.system(size: 18, weight: .medium))
-              .foregroundStyle(.blue)
-          }
-          .buttonStyle(.plain)
-        }
-      }
-
-      if ProductLookup.productSearchURL(for: rawValue) != nil, let url = ProductLookup.productSearchURL(for: rawValue) {
-        Link(destination: url) {
-          GlassCard(padding: 14) {
-            HStack {
-              Image(systemName: "cart.fill")
-                .foregroundStyle(.blue)
-              Text("Find product")
-                .font(.body.weight(.semibold))
-              Spacer()
-              Image(systemName: "arrow.up.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.tertiary)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Scan")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if showDismissButton {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 34, height: 34)
+                            .glassEffect(.regular, in: Circle())
+                    }
+                }
             }
-          }
         }
-        .buttonStyle(.plain)
-      }
+        .toolbarBackground(.visible, for: .navigationBar)
+        .sheet(isPresented: $showShare) {
+            ShareSheet(items: shareItems)
+        }
+        .copiedToast(isPresented: $showCopiedToast)
+    }
 
-      HStack(spacing: 12) {
-        actionPill(title: "Open", systemName: "arrow.up.right.circle.fill", role: nil) {
-          openValue()
-        }
-        actionPill(title: "Share", systemName: "square.and.arrow.up", role: nil) {
-          if let img = previewImage ?? synthesizedImage() {
-            shareItems = [rawValue, img]
-          } else {
-            shareItems = [rawValue]
-          }
-          showShare = true
-        }
-      }
+    private var headerSection: some View {
+        VStack(spacing: 18) {
+            Text(headerTitle)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.primary)
+                .padding(.top, 4)
 
-      if let onDelete {
-        Button(role: .destructive, action: onDelete) {
-          Text("Delete")
-            .font(.body.weight(.semibold))
+            Group {
+                if let previewImage {
+                    Image(uiImage: previewImage)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFit()
+                        .padding(18)
+                        .frame(maxWidth: 260, maxHeight: 260)
+                        .background {
+                            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+                        }
+                } else {
+                    Image(systemName: "qrcode")
+                        .font(.system(size: 72))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 200, height: 200)
+                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 28)
+        .frame(maxWidth: .infinity)
+        .background(.regularMaterial)
+    }
+
+    private var headerTitle: String {
+        let t = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.count > 28 { return String(t.prefix(25)) + "…" }
+        return t.isEmpty ? "Scan" : t
+    }
+
+    private var contentSection: some View {
+        VStack(spacing: 16) {
+            GlassCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Type")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(SymbologyDisplay.friendlyName(symbology))
+                        .font(.body.weight(.medium))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            GlassCard {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Value")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(rawValue)
+                            .font(.body.weight(.semibold))
+                            .textSelection(.enabled)
+                    }
+                    Spacer()
+                    Button {
+                        copyToClipboard(rawValue)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.blue)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if ProductLookup.productSearchURL(for: rawValue) != nil, let url = ProductLookup.productSearchURL(for: rawValue) {
+                Link(destination: url) {
+                    GlassCard(padding: 14) {
+                        HStack {
+                            Image(systemName: "cart.fill")
+                                .foregroundStyle(.blue)
+                            Text("Find product")
+                                .font(.body.weight(.semibold))
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 12) {
+                actionPill(title: "Open", systemName: "arrow.up.right.circle.fill", role: nil) {
+                    openValue()
+                }
+                actionPill(title: "Share", systemName: "square.and.arrow.up", role: nil) {
+                    if let img = previewImage ?? synthesizedImage() {
+                        shareItems = [rawValue, img]
+                    } else {
+                        shareItems = [rawValue]
+                    }
+                    showShare = true
+                }
+            }
+
+            if let onDelete {
+                Button(role: .destructive, action: onDelete) {
+                    Text("Delete")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(.red)
+                        .background {
+                            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                                .fill(.clear)
+                                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                        }
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .padding(.top, 8)
+        .background {
+            UnevenRoundedRectangle(
+                cornerRadii: RectangleCornerRadii(
+                    topLeading: LiquidGlass.cornerLarge,
+                    bottomLeading: 0,
+                    bottomTrailing: 0,
+                    topTrailing: LiquidGlass.cornerLarge
+                ),
+                style: .continuous
+            )
+            .fill(Color(.systemGroupedBackground))
+            .shadow(color: .black.opacity(0.06), radius: 16, y: -4)
+        }
+        .offset(y: -12)
+    }
+
+    private func actionPill(title: String, systemName: String, role: ButtonRole?, action: @escaping () -> Void) -> some View {
+        Button(role: role, action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: systemName)
+                Text(title)
+                    .font(.body.weight(.semibold))
+            }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background {
-              RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                .fill(Color.red.opacity(0.12))
+                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                    .fill(.clear)
+                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
             }
         }
         .buttonStyle(.plain)
-        .padding(.top, 4)
-      }
     }
-    .padding(16)
-    .padding(.top, 8)
-    .background {
-      UnevenRoundedRectangle(
-        cornerRadii: RectangleCornerRadii(
-          topLeading: LiquidGlass.cornerLarge,
-          bottomLeading: 0,
-          bottomTrailing: 0,
-          topTrailing: LiquidGlass.cornerLarge
-        ),
-        style: .continuous
-      )
-      .fill(Color(.systemGroupedBackground))
-      .shadow(color: .black.opacity(0.06), radius: 16, y: -4)
-    }
-    .offset(y: -12)
-  }
 
-  private func actionPill(title: String, systemName: String, role: ButtonRole?, action: @escaping () -> Void) -> some View {
-    Button(role: role, action: action) {
-      HStack(spacing: 8) {
-        Image(systemName: systemName)
-        Text(title)
-          .font(.body.weight(.semibold))
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 14)
-      .background {
-        RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-          .fill(.clear)
-          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
-      }
+    private func synthesizedImage() -> UIImage? {
+        let style = CodeStyleConfiguration.default
+        if symbology.localizedCaseInsensitiveContains("qr") {
+            return QRBarcodeImageGenerator.qrUIImage(payload: rawValue, style: style, centerImage: nil)
+        }
+        return QRBarcodeImageGenerator.linearBarcodeUIImage(payload: rawValue, style: style)
     }
-    .buttonStyle(.plain)
-  }
 
-  private func synthesizedImage() -> UIImage? {
-    let style = CodeStyleConfiguration.default
-    if symbology.localizedCaseInsensitiveContains("qr") {
-      return QRBarcodeImageGenerator.qrUIImage(payload: rawValue, style: style, centerImage: nil)
+    private func copyToClipboard(_ text: String) {
+        UIPasteboard.general.string = text
+        Haptics.light(enabled: hapticsEnabled)
+        showCopiedToast = true
     }
-    return QRBarcodeImageGenerator.linearBarcodeUIImage(payload: rawValue, style: style)
-  }
 
-  private func openValue() {
-    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.lowercased().hasPrefix("http"), let u = URL(string: trimmed) {
-      UIApplication.shared.open(u)
-      return
+    private func openValue() {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.lowercased().hasPrefix("http"), let u = URL(string: trimmed) {
+            UIApplication.shared.open(u)
+            return
+        }
+        if trimmed.lowercased().hasPrefix("tel:"), let u = URL(string: trimmed) {
+            UIApplication.shared.open(u)
+            return
+        }
+        if trimmed.lowercased().hasPrefix("mailto:"), let u = URL(string: trimmed) {
+            UIApplication.shared.open(u)
+            return
+        }
+        if trimmed.lowercased().hasPrefix("sms:"), let u = URL(string: trimmed) {
+            UIApplication.shared.open(u)
+            return
+        }
+        if trimmed.lowercased().hasPrefix("geo:") {
+            let q = trimmed.replacingOccurrences(of: "geo:", with: "").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            if let u = URL(string: "https://maps.apple.com/?q=\(q)") {
+                UIApplication.shared.open(u)
+            }
+            return
+        }
+        if let u = URL(string: trimmed), u.scheme != nil {
+            UIApplication.shared.open(u)
+            return
+        }
+        if let u = ProductLookup.productSearchURL(for: rawValue) {
+            UIApplication.shared.open(u)
+            return
+        }
+        let q = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if !q.isEmpty, let u = URL(string: "https://www.google.com/search?q=\(q)") {
+            UIApplication.shared.open(u)
+        }
     }
-    if trimmed.lowercased().hasPrefix("tel:"), let u = URL(string: trimmed) {
-      UIApplication.shared.open(u)
-      return
-    }
-    if trimmed.lowercased().hasPrefix("mailto:"), let u = URL(string: trimmed) {
-      UIApplication.shared.open(u)
-      return
-    }
-    if trimmed.lowercased().hasPrefix("sms:"), let u = URL(string: trimmed) {
-      UIApplication.shared.open(u)
-      return
-    }
-    if trimmed.lowercased().hasPrefix("geo:") {
-      let q = trimmed.replacingOccurrences(of: "geo:", with: "").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-      if let u = URL(string: "https://maps.apple.com/?q=\(q)") {
-        UIApplication.shared.open(u)
-      }
-      return
-    }
-    if let u = URL(string: trimmed), u.scheme != nil {
-      UIApplication.shared.open(u)
-    }
-  }
 }
 
 struct ShareSheet: UIViewControllerRepresentable {
-  var items: [Any]
+    var items: [Any]
 
-  func makeUIViewController(context: Context) -> UIActivityViewController {
-    UIActivityViewController(activityItems: items, applicationActivities: nil)
-  }
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
 
-  func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

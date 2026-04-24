@@ -19,6 +19,8 @@ final class ScanViewModel {
   var lastPreviewImage: UIImage?
   var scanDetailPresented = false
   var throttleUntil: Date = .distantPast
+  /// Row id of the most recently persisted scan (camera or photo) while the detail sheet is relevant.
+  var lastPersistedScanId: Int?
 
   @ObservationIgnored
   @Dependency(\.defaultDatabase) private var database
@@ -65,6 +67,22 @@ final class ScanViewModel {
     scanDetailPresented = false
   }
 
+  /// Deletes the scan row created for the current in-session result and dismisses the detail sheet.
+  func deleteLastScannedIfPresented() {
+    if let id = lastPersistedScanId {
+      do {
+        try database.write { db in
+          try db.execute(sql: "DELETE FROM scan_records WHERE id = ?", arguments: [id])
+        }
+      } catch {}
+    }
+    lastPersistedScanId = nil
+    lastScannedValue = nil
+    lastSymbology = nil
+    lastPreviewImage = nil
+    clearDetail()
+  }
+
   private func synthesizedPreview(symbology: String, value: String) -> UIImage? {
     let style = CodeStyleConfiguration.default
     if symbology.contains("QR") || symbology == "qr" {
@@ -76,6 +94,7 @@ final class ScanViewModel {
   private func persistScan(symbology: String, value: String, image: UIImage?) {
     let data = image.flatMap { $0.jpegData(compressionQuality: 0.82) }
     let title = value.count > 44 ? String(value.prefix(41)) + "…" : value
+    var newId: Int?
     do {
       try database.write { db in
         try ScanRecord.insert {
@@ -87,7 +106,11 @@ final class ScanViewModel {
             createdAt: Date()
           )
         }.execute(db)
+        newId = Int(db.lastInsertedRowID)
       }
-    } catch {}
+    } catch {
+      newId = nil
+    }
+    lastPersistedScanId = newId
   }
 }

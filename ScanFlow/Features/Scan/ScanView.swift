@@ -13,7 +13,6 @@ struct ScanView: View {
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
   @State private var photoItem: PhotosPickerItem?
   @State private var photoLoadError = false
-  @State private var scanMode: ScanSessionMode = .single
 
   var body: some View {
     ZStack {
@@ -26,7 +25,6 @@ struct ScanView: View {
         .scanflowScreenBackground()
       } else {
         BarcodeScannerView(isTorchOn: model.isTorchOn) { value, type in
-          guard scanMode == .single else { return }
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .ignoresSafeArea()
@@ -72,10 +70,6 @@ struct ScanView: View {
             .padding(.bottom, 12)
 
           Spacer(minLength: 120)
-
-          scanModePicker
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
         }
       }
     }
@@ -96,24 +90,11 @@ struct ScanView: View {
             symbology: s,
             rawValue: v,
             previewImage: model.lastPreviewImage,
-            onDismiss: { model.clearDetail() }
+            onDismiss: { model.clearDetail() },
+            onDelete: { model.deleteLastScannedIfPresented() }
           )
         }
       }
-    }
-  }
-
-  private var scanModePicker: some View {
-    Picker("Mode", selection: $scanMode) {
-      Text("Single").tag(ScanSessionMode.single)
-      Text("Batch").tag(ScanSessionMode.batch)
-    }
-    .pickerStyle(.segmented)
-    .padding(6)
-    .background {
-      RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-        .fill(.clear)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
     }
   }
 

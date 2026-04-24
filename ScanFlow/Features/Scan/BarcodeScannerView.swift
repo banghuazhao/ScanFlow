@@ -17,48 +17,56 @@ struct BarcodeScannerView: UIViewRepresentable {
 
   func makeUIView(context: Context) -> ScannerPreviewView {
     let v = ScannerPreviewView()
-    v.previewLayer.session = context.coordinator.session
     context.coordinator.previewView = v
-    context.coordinator.configure()
-    context.coordinator.start()
+    context.coordinator.sessionQueue.async {
+      context.coordinator.configure(preview: v)
+    }
     return v
   }
 
   func updateUIView(_ uiView: ScannerPreviewView, context: Context) {
-    context.coordinator.setTorch(isTorchOn)
+    let on = isTorchOn
+    context.coordinator.sessionQueue.async {
+      context.coordinator.setTorch(on)
+    }
   }
 
   final class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     let session = AVCaptureSession()
     let metadataOutput = AVCaptureMetadataOutput()
+    let sessionQueue = DispatchQueue(label: "com.scanflow.camera.session")
     var previewView: ScannerPreviewView?
     var onScan: (String, AVMetadataObject.ObjectType) -> Void
-    private var device: AVCaptureDevice?
+    var device: AVCaptureDevice?
+    var torchOn = false
+    var sessionConfigured = false
 
     init(onScan: @escaping (String, AVMetadataObject.ObjectType) -> Void) {
       self.onScan = onScan
     }
 
     deinit {
-      stop()
+      sessionQueue.async { [session] in
+        session.stopRunning()
+      }
     }
 
-    func configure() {
+    func configure(preview: ScannerPreviewView) {
       session.beginConfiguration()
       session.sessionPreset = .high
 
-      guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-            let input = try? AVCaptureDeviceInput(device: device)
+      guard let dev = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+            let input = try? AVCaptureDeviceInput(device: dev)
       else {
         session.commitConfiguration()
         return
       }
-      self.device = device
+      device = dev
 
       if session.canAddInput(input) { session.addInput(input) }
       if session.canAddOutput(metadataOutput) {
         session.addOutput(metadataOutput)
-        metadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue(label: "scanflow.metadata"))
+        metadataOutput.setMetadataObjectsDelegate(self, queue: sessionQueue)
         let wanted: [AVMetadataObject.ObjectType] = [
           .qr,
           .aztec,
@@ -76,29 +84,40 @@ struct BarcodeScannerView: UIViewRepresentable {
         metadataOutput.metadataObjectTypes = wanted.filter { metadataOutput.availableMetadataObjectTypes.contains($0) }
       }
       session.commitConfiguration()
-    }
+      sessionConfigured = true
 
-    func start() {
-      guard !session.isRunning else { return }
-      DispatchQueue.global(qos: .userInitiated).async { [session] in
+      preview.previewLayer.session = session
+      preview.session = session
+      if !session.isRunning {
         session.startRunning()
       }
-    }
-
-    func stop() {
-      guard session.isRunning else { return }
-      DispatchQueue.global(qos: .userInitiated).async { [session] in
-        session.stopRunning()
-      }
+      setTorch(torchOn)
     }
 
     func setTorch(_ on: Bool) {
-      guard let device, device.hasTorch else { return }
+      torchOn = on
+      guard sessionConfigured, let device, device.hasTorch else { return }
       do {
         try device.lockForConfiguration()
-        device.torchMode = on ? .on : .off
+        if on {
+          if device.isTorchModeSupported(.on) {
+            try device.setTorchModeOn(level: 1.0)
+          }
+        } else if device.isTorchModeSupported(.off) {
+          device.torchMode = .off
+        }
         device.unlockForConfiguration()
-      } catch {}
+      } catch {
+        do {
+          try device.lockForConfiguration()
+          if on, device.isTorchModeSupported(.on) {
+            device.torchMode = .on
+          } else {
+            device.torchMode = .off
+          }
+          device.unlockForConfiguration()
+        } catch {}
+      }
     }
 
     func metadataOutput(
@@ -121,6 +140,10 @@ final class ScannerPreviewView: UIView {
   override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
 
   var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+  var session: AVCaptureSession? {
+    get { previewLayer.session }
+    set { previewLayer.session = newValue }
+  }
 
   override func layoutSubviews() {
     super.layoutSubviews()
