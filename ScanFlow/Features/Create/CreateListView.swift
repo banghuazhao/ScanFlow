@@ -106,10 +106,6 @@ private struct CreatedCodeGlassRow: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
-      Spacer()
-      Image(systemName: "chevron.right")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.tertiary)
     }
     .padding(.vertical, 6)
   }

@@ -76,6 +76,7 @@ struct CreateCodeEditorView: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -103,6 +104,7 @@ struct CreateCodeEditorView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save", action: save)
                     .fontWeight(.semibold)
+                    .disabled(!canSave)
             }
         }
         .onAppear(perform: load)
@@ -143,33 +145,77 @@ struct CreateCodeEditorView: View {
         return false
     }
 
+    private var canSave: Bool {
+        !builtPayload().isEmpty
+    }
+
     @ViewBuilder
     private var styleSections: some View {
         Section {
-            ColorPicker("Foreground", selection: $foregroundColor, supportsOpacity: false)
-            ColorPicker("Background", selection: $backgroundColor, supportsOpacity: false)
+            HStack {
+                Text("Foreground")
+                Spacer()
+                ColorPicker("", selection: $foregroundColor, supportsOpacity: false)
+                    .labelsHidden()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            HStack {
+                Text("Background")
+                Spacer()
+                ColorPicker("", selection: $backgroundColor, supportsOpacity: false)
+                    .labelsHidden()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
             if kind != .barcode {
-                Picker("Modules", selection: $style.moduleShape) {
-                    Text("Square").tag(CodeModuleShape.square)
-                    Text("Rounded").tag(CodeModuleShape.rounded)
-                    Text("Circle").tag(CodeModuleShape.circle)
+                HStack {
+                    Text("Modules")
+                    Spacer()
+                    Picker("Modules", selection: $style.moduleShape) {
+                        Text("Square").tag(CodeModuleShape.square)
+                        Text("Rounded").tag(CodeModuleShape.rounded)
+                        Text("Circle").tag(CodeModuleShape.circle)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
-                Picker("Eyes", selection: $style.pupilShape) {
-                    Text("Square").tag(CodePupilShape.square)
-                    Text("Rounded").tag(CodePupilShape.rounded)
-                    Text("Circle").tag(CodePupilShape.circle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                HStack {
+                    Text("Eyes")
+                    Spacer()
+                    Picker("Eyes", selection: $style.pupilShape) {
+                        Text("Square").tag(CodePupilShape.square)
+                        Text("Rounded").tag(CodePupilShape.rounded)
+                        Text("Circle").tag(CodePupilShape.circle)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
-                Picker("Center", selection: $style.centerMode) {
-                    Text("None").tag(CodeCenterMode.none)
-                    Text("Auto").tag(CodeCenterMode.auto)
-                    Text("Custom").tag(CodeCenterMode.custom)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                HStack {
+                    Text("Center")
+                    Spacer()
+                    Picker("Center", selection: $style.centerMode) {
+                        Text("None").tag(CodeCenterMode.none)
+                        Text("Auto").tag(CodeCenterMode.auto)
+                        Text("Custom").tag(CodeCenterMode.custom)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
                 if style.centerMode == .custom {
                     PhotosPicker(selection: $centerPhotoItem, matching: .images, photoLibrary: .shared()) {
-                        Label(centerImageData == nil ? "Image" : "Replace", systemImage: "photo")
+                        HStack {
+                            Label(centerImageData == nil ? "Image" : "Replace", systemImage: "photo")
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                 }
             }

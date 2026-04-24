@@ -147,10 +147,6 @@ private struct HistoryGlassRow: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
-      Spacer(minLength: 8)
-      Image(systemName: "ellipsis.circle")
-        .font(.system(size: 22))
-        .foregroundStyle(.tertiary)
     }
     .padding(.vertical, 6)
   }
