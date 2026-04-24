@@ -44,12 +44,16 @@ struct BarcodeScannerView: UIViewRepresentable {
         var device: AVCaptureDevice?
         var torchOn = false
         var sessionConfigured = false
+        private var sessionStartObserver: NSObjectProtocol?
 
         init(onScan: @escaping (String, AVMetadataObject.ObjectType) -> Void) {
             self.onScan = onScan
         }
 
         deinit {
+            if let o = sessionStartObserver {
+                NotificationCenter.default.removeObserver(o)
+            }
             sessionQueue.async { [session] in
                 session.stopRunning()
             }
@@ -61,8 +65,9 @@ struct BarcodeScannerView: UIViewRepresentable {
             session.beginConfiguration()
             session.sessionPreset = .high
 
-            guard let dev = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-                  let input = try? AVCaptureDeviceInput(device: dev)
+            guard
+                let dev = Self.preferredBackCameraForTorch(),
+                let input = try? AVCaptureDeviceInput(device: dev)
             else {
                 session.commitConfiguration()
                 return
@@ -94,40 +99,94 @@ struct BarcodeScannerView: UIViewRepresentable {
                 session.startRunning()
             }
             sessionConfigured = true
-            // Re-apply last requested torch (may have been set in `setTorch` before we were ready).
-            setTorch(torchOn)
             // `UIView.layer` / `AVCaptureVideoPreviewLayer` must be touched on the main thread.
             let sessionRef = self.session
             DispatchQueue.main.async { [weak preview] in
                 guard let preview else { return }
                 preview.previewLayer.session = sessionRef
             }
+            // Re-apply torch when the session actually starts; torch set too early is often ignored.
+            sessionStartObserver = NotificationCenter.default.addObserver(
+                forName: AVCaptureSession.didStartRunningNotification,
+                object: session,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.sessionQueue.async { [weak self] in
+                    guard let self else { return }
+                    self.setTorch(self.torchOn)
+                }
+            }
+            // Re-apply last requested torch (may have been set in `setTorch` before we were ready).
+            setTorch(torchOn)
         }
 
         func setTorch(_ on: Bool) {
-            torchOn = on
-            guard sessionConfigured, let device, device.hasTorch else { return }
+            let wantOn = on
+            torchOn = wantOn
+            guard sessionConfigured else { return }
+            // Always use the same device the session is actually capturing from (avoids
+            // torch no-ops on multi-lens + session-open edge cases).
+            let dev = self.sessionVideoDevice() ?? self.device
+            guard let dev, dev.hasTorch else { return }
             do {
-                try device.lockForConfiguration()
-                if on {
-                    if device.isTorchModeSupported(.on) {
-                        try device.setTorchModeOn(level: 1.0)
-                    }
-                } else if device.isTorchModeSupported(.off) {
-                    device.torchMode = .off
-                }
-                device.unlockForConfiguration()
+                try dev.lockForConfiguration()
             } catch {
-                do {
-                    try device.lockForConfiguration()
-                    if on, device.isTorchModeSupported(.on) {
-                        device.torchMode = .on
-                    } else {
-                        device.torchMode = .off
-                    }
-                    device.unlockForConfiguration()
-                } catch {}
+                return
             }
+            defer { dev.unlockForConfiguration() }
+            Self.applyTorch(wantOn, to: dev)
+        }
+
+        /// Device currently attached to the session (the one that must be torched while preview runs).
+        private func sessionVideoDevice() -> AVCaptureDevice? {
+            for case let i as AVCaptureDeviceInput in session.inputs where i.device.hasMediaType(.video) {
+                return i.device
+            }
+            return nil
+        }
+
+        /// Picks a back video device that can drive the LED while recording (same as many stock apps try).
+        private static func preferredBackCameraForTorch() -> AVCaptureDevice? {
+            let deviceTypes: [AVCaptureDevice.DeviceType] = [
+                .builtInWideAngleCamera,
+                .builtInDualWideCamera,
+                .builtInDualCamera,
+                .builtInTripleCamera,
+            ]
+            let discovery = AVCaptureDevice.DiscoverySession(
+                deviceTypes: deviceTypes,
+                mediaType: .video,
+                position: .back
+            )
+            if let t = discovery.devices.first(where: { $0.hasTorch }) { return t }
+            return discovery.devices.first
+        }
+
+        private static func applyTorch(_ on: Bool, to d: AVCaptureDevice) {
+            if on {
+                guard d.isTorchModeSupported(.on) else { return }
+                // While a session is running, the level-based API with a valid max (not always 1.0)
+                // is what reliably drives the LED on many iPhones; fixed 1.0 often throws.
+                let cap = maxSupportedTorchLevel(for: d)
+                do {
+                    try d.setTorchModeOn(level: cap)
+                } catch {
+                    d.torchMode = .on
+                }
+            } else {
+                if d.isTorchModeSupported(.off) { d.torchMode = .off }
+            }
+        }
+
+        private static func maxSupportedTorchLevel(for d: AVCaptureDevice) -> Float {
+            if let f = d.value(forKey: "maxAvailableTorchLevel") as? Float, f > 0 {
+                return min(1, f)
+            }
+            if let f = d.value(forKey: "maxAvailableTorchLevel") as? Double, f > 0 {
+                return min(1, Float(f))
+            }
+            return 1.0
         }
 
         func metadataOutput(

@@ -12,7 +12,6 @@ import UIKit
 
 @Observable @MainActor
 final class ScanViewModel {
-  var isTorchOn = false
   var cameraDenied = false
   var lastScannedValue: String?
   var lastSymbology: String?

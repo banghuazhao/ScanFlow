@@ -24,7 +24,8 @@ struct ScanView: View {
         )
         .scanflowScreenBackground()
       } else {
-        BarcodeScannerView(isTorchOn: $model.isTorchOn) { value, type in
+        // Torch hidden: device LED with AVCaptureSession is unreliable in the field; re-enable when fixed.
+        BarcodeScannerView(isTorchOn: .constant(false)) { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .ignoresSafeArea()
@@ -33,14 +34,6 @@ struct ScanView: View {
 
         VStack(spacing: 0) {
           HStack(spacing: 16) {
-            GlassCircleButton(
-              systemName: model.isTorchOn ? "flashlight.on.fill" : "flashlight.off.fill",
-              isActive: model.isTorchOn
-            ) {
-              model.isTorchOn.toggle()
-              Haptics.light(enabled: hapticsEnabled)
-            }
-
             Spacer()
 
             PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
