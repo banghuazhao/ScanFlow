@@ -43,6 +43,10 @@ struct CreatedCodeDetailView: View {
         .copiedToast(isPresented: $showCopiedToast)
     }
 
+    private var isOpenable: Bool {
+        OpenDestination.url(for: record.payload) != nil
+    }
+
     private var headerSection: some View {
         VStack(spacing: 18) {
             Text(record.displayLabel)
@@ -108,8 +112,10 @@ struct CreatedCodeDetailView: View {
             }
 
             HStack(spacing: 12) {
-                secondaryPill(title: "Open", systemName: "arrow.up.right.circle.fill") {
-                    openPayload()
+                if isOpenable {
+                    secondaryPill(title: "Open", systemName: "arrow.up.right.circle.fill") {
+                        openPayload()
+                    }
                 }
                 if record.kind == .phone, let url = URL(string: record.payload), url.scheme == "tel" {
                     secondaryPill(title: "Call", systemName: "phone.fill") {
@@ -187,32 +193,7 @@ struct CreatedCodeDetailView: View {
     }
 
     private func openPayload() {
-        let p = record.payload.trimmingCharacters(in: .whitespacesAndNewlines)
-        if p.lowercased().hasPrefix("http"), let u = URL(string: p) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if p.lowercased().hasPrefix("tel:"), let u = URL(string: p) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if p.lowercased().hasPrefix("mailto:"), let u = URL(string: p) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if p.lowercased().hasPrefix("sms:"), let u = URL(string: p) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if p.lowercased().hasPrefix("geo:") {
-            let q = p.replacingOccurrences(of: "geo:", with: "").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let u = URL(string: "https://maps.apple.com/?q=\(q)") {
-                UIApplication.shared.open(u)
-            }
-            return
-        }
-        if let u = URL(string: p), u.scheme != nil {
-            UIApplication.shared.open(u)
-        }
+        guard let u = OpenDestination.url(for: record.payload) else { return }
+        UIApplication.shared.open(u)
     }
 }

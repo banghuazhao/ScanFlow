@@ -90,6 +90,10 @@ struct ScanResultDetailView: View {
         return t.isEmpty ? "Scan" : t
     }
 
+    private var isOpenable: Bool {
+        OpenDestination.url(for: rawValue) != nil
+    }
+
     private var contentSection: some View {
         VStack(spacing: 16) {
             GlassCard {
@@ -144,8 +148,10 @@ struct ScanResultDetailView: View {
             }
 
             HStack(spacing: 12) {
-                actionPill(title: "Open", systemName: "arrow.up.right.circle.fill", role: nil) {
-                    openValue()
+                if isOpenable {
+                    actionPill(title: "Open", systemName: "arrow.up.right.circle.fill", role: nil) {
+                        openValue()
+                    }
                 }
                 actionPill(title: "Share", systemName: "square.and.arrow.up", role: nil) {
                     if let img = previewImage ?? synthesizedImage() {
@@ -225,42 +231,8 @@ struct ScanResultDetailView: View {
     }
 
     private func openValue() {
-        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.lowercased().hasPrefix("http"), let u = URL(string: trimmed) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if trimmed.lowercased().hasPrefix("tel:"), let u = URL(string: trimmed) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if trimmed.lowercased().hasPrefix("mailto:"), let u = URL(string: trimmed) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if trimmed.lowercased().hasPrefix("sms:"), let u = URL(string: trimmed) {
-            UIApplication.shared.open(u)
-            return
-        }
-        if trimmed.lowercased().hasPrefix("geo:") {
-            let q = trimmed.replacingOccurrences(of: "geo:", with: "").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let u = URL(string: "https://maps.apple.com/?q=\(q)") {
-                UIApplication.shared.open(u)
-            }
-            return
-        }
-        if let u = URL(string: trimmed), u.scheme != nil {
-            UIApplication.shared.open(u)
-            return
-        }
-        if let u = ProductLookup.productSearchURL(for: rawValue) {
-            UIApplication.shared.open(u)
-            return
-        }
-        let q = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if !q.isEmpty, let u = URL(string: "https://www.google.com/search?q=\(q)") {
-            UIApplication.shared.open(u)
-        }
+        guard let u = OpenDestination.url(for: rawValue) else { return }
+        UIApplication.shared.open(u)
     }
 }
 
