@@ -94,6 +94,14 @@ struct ScanResultDetailView: View {
         OpenDestination.url(for: rawValue) != nil
     }
 
+    private var symbologyLabel: String {
+        SymbologyDisplay.friendlyName(symbology)
+    }
+
+    private var webSearchAction: ScanWebSearchAction? {
+        ProductLookup.webSearchAction(raw: rawValue, symbology: symbology)
+    }
+
     private var contentSection: some View {
         VStack(spacing: 16) {
             GlassCard {
@@ -101,7 +109,7 @@ struct ScanResultDetailView: View {
                     Text("Type")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                    Text(SymbologyDisplay.friendlyName(symbology))
+                    Text(symbologyLabel)
                         .font(.body.weight(.medium))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,13 +137,13 @@ struct ScanResultDetailView: View {
                 }
             }
 
-            if ProductLookup.productSearchURL(for: rawValue) != nil, let url = ProductLookup.productSearchURL(for: rawValue) {
-                Link(destination: url) {
+            if let action = webSearchAction {
+                Link(destination: action.url) {
                     GlassCard(padding: 14) {
                         HStack {
-                            Image(systemName: "cart.fill")
+                            Image(systemName: action.systemImage)
                                 .foregroundStyle(.blue)
-                            Text("Find product")
+                            Text(action.title)
                                 .font(.body.weight(.semibold))
                             Spacer()
                             Image(systemName: "arrow.up.right")

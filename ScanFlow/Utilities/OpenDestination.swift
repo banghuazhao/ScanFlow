@@ -5,7 +5,8 @@
 
 import Foundation
 
-/// Resolves a URL that can be opened in another app (browser, phone, maps, product link, custom schemes).
+/// Resolves a URL that can be opened in another app (browser, phone, maps, custom schemes).
+/// Plain numeric product barcodes are not opened here; use "Find product" in scan detail for Shopping.
 /// Does not include generic web search; plain text is not "openable" for the Open action.
 enum OpenDestination {
   static func url(for raw: String) -> URL? {
@@ -25,6 +26,6 @@ enum OpenDestination {
     if let u = URL(string: trimmed), let scheme = u.scheme, !scheme.isEmpty, scheme != "file" {
       return u
     }
-    return ProductLookup.productSearchURL(for: raw)
+    return nil
   }
 }
