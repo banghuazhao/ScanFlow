@@ -73,7 +73,9 @@ final class ScanViewModel {
         try database.write { db in
           try db.execute(sql: "DELETE FROM scan_records WHERE id = ?", arguments: [id])
         }
-      } catch {}
+      } catch {
+        AppLog.logPersistenceError("Delete last scan", error)
+      }
     }
     lastPersistedScanId = nil
     lastScannedValue = nil
@@ -108,6 +110,7 @@ final class ScanViewModel {
         newId = Int(db.lastInsertedRowID)
       }
     } catch {
+      AppLog.logPersistenceError("Persist scan", error)
       newId = nil
     }
     lastPersistedScanId = newId

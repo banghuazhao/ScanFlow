@@ -23,7 +23,9 @@ final class CreateViewModel {
       try database.write { db in
         try CreatedCodeRecord.delete(record).execute(db)
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Delete created code", error)
+    }
   }
 
   func saveNew(
@@ -49,7 +51,9 @@ final class CreateViewModel {
           )
         }.execute(db)
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Insert created code", error)
+    }
   }
 
   func update(_ record: CreatedCodeRecord) {
@@ -57,7 +61,9 @@ final class CreateViewModel {
       try database.write { db in
         try CreatedCodeRecord.update(record).execute(db)
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Update created code", error)
+    }
   }
 
   func image(for record: CreatedCodeRecord) -> UIImage? {

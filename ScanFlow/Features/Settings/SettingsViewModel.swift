@@ -17,7 +17,9 @@ final class SettingsViewModel {
       try database.write { db in
         try db.execute(sql: "DELETE FROM scan_records")
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Delete all scans", error)
+    }
   }
 
   func deleteAllCreatedCodes() {
@@ -25,6 +27,8 @@ final class SettingsViewModel {
       try database.write { db in
         try db.execute(sql: "DELETE FROM created_codes")
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Delete all created codes", error)
+    }
   }
 }

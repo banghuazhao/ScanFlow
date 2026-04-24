@@ -8,18 +8,7 @@ import GRDB
 import SQLiteData
 
 enum AppDatabase {
-  static func makeDatabaseQueue() throws -> DatabaseQueue {
-    let fileManager = FileManager.default
-    let folder = try fileManager.url(
-      for: .applicationSupportDirectory,
-      in: .userDomainMask,
-      appropriateFor: nil,
-      create: true
-    )
-    .appendingPathComponent("ScanFlow", isDirectory: true)
-    try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-    let url = folder.appendingPathComponent("scanflow.sqlite")
-    let dbQueue = try DatabaseQueue(path: url.path)
+  private static func applyMigrations(to dbQueue: DatabaseQueue) throws {
     var migrator = DatabaseMigrator()
     migrator.registerMigration("initial") { db in
       try db.create(table: "scan_records", ifNotExists: true) { t in
@@ -42,6 +31,28 @@ enum AppDatabase {
       }
     }
     try migrator.migrate(dbQueue)
+  }
+
+  static func makeDatabaseQueue() throws -> DatabaseQueue {
+    let fileManager = FileManager.default
+    let folder = try fileManager.url(
+      for: .applicationSupportDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    )
+    .appendingPathComponent("ScanFlow", isDirectory: true)
+    try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
+    let url = folder.appendingPathComponent("scanflow.sqlite")
+    let dbQueue = try DatabaseQueue(path: url.path)
+    try applyMigrations(to: dbQueue)
+    return dbQueue
+  }
+
+  /// In-memory store when the on-disk file cannot be created (e.g. very low storage). Data does not survive app termination.
+  static func makeInMemoryDatabaseQueue() throws -> DatabaseQueue {
+    let dbQueue = try DatabaseQueue()
+    try applyMigrations(to: dbQueue)
     return dbQueue
   }
 }

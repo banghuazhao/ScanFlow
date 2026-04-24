@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
   @AppStorage("scanflow.startWithCamera") private var startWithCamera = true
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
+  @AppStorage("scanflow.usingInMemoryStore") private var usingInMemoryStore = false
   @State private var showDeleteScansConfirm = false
   @State private var showDeleteCreatedConfirm = false
   @State private var model = SettingsViewModel()
@@ -15,6 +16,24 @@ struct SettingsView: View {
   var body: some View {
     NavigationStack {
       Form {
+        if usingInMemoryStore {
+          Section {
+            Label {
+              VStack(alignment: .leading, spacing: 4) {
+                Text("Temporary storage")
+                Text(
+                  "The app could not use its normal on-device database (for example, very low storage). History and created codes may not persist after you quit. Free space or reinstall if this persists."
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+              }
+            } icon: {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.orange)
+            }
+          }
+        }
         Section {
           Toggle("Start on Scan tab", isOn: $startWithCamera)
           Toggle("Haptics", isOn: $hapticsEnabled)

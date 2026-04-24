@@ -22,7 +22,9 @@ final class HistoryViewModel {
       try database.write { db in
         try ScanRecord.delete(record).execute(db)
       }
-    } catch {}
+    } catch {
+      AppLog.logPersistenceError("Delete scan", error)
+    }
   }
 
   func delete(at offsets: IndexSet) {
