@@ -24,7 +24,7 @@ struct ScanView: View {
         )
         .scanflowScreenBackground()
       } else {
-        BarcodeScannerView(isTorchOn: model.isTorchOn) { value, type in
+        BarcodeScannerView(isTorchOn: $model.isTorchOn) { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .ignoresSafeArea()

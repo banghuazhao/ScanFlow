@@ -8,7 +8,7 @@ import SwiftUI
 import UIKit
 
 struct BarcodeScannerView: UIViewRepresentable {
-    var isTorchOn: Bool
+    @Binding var isTorchOn: Bool
     var onScan: (String, AVMetadataObject.ObjectType) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -18,6 +18,7 @@ struct BarcodeScannerView: UIViewRepresentable {
     func makeUIView(context: Context) -> ScannerPreviewView {
         let v = ScannerPreviewView()
         context.coordinator.previewView = v
+        context.coordinator.onScan = onScan
         context.coordinator.sessionQueue.async {
             context.coordinator.configure(preview: v)
         }
@@ -25,9 +26,12 @@ struct BarcodeScannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: ScannerPreviewView, context: Context) {
+        // Keep the scan handler in sync; closure can change when parent re-renders.
+        let coordinator = context.coordinator
+        coordinator.onScan = onScan
         let on = isTorchOn
-        context.coordinator.sessionQueue.async {
-            context.coordinator.setTorch(on)
+        coordinator.sessionQueue.async {
+            coordinator.setTorch(on)
         }
     }
 
@@ -90,12 +94,13 @@ struct BarcodeScannerView: UIViewRepresentable {
                 session.startRunning()
             }
             sessionConfigured = true
+            // Re-apply last requested torch (may have been set in `setTorch` before we were ready).
+            setTorch(torchOn)
             // `UIView.layer` / `AVCaptureVideoPreviewLayer` must be touched on the main thread.
             let sessionRef = self.session
-            DispatchQueue.main.async { [weak self, weak preview] in
-                guard let self, let preview else { return }
+            DispatchQueue.main.async { [weak preview] in
+                guard let preview else { return }
                 preview.previewLayer.session = sessionRef
-                self.sessionQueue.async { self.setTorch(self.torchOn) }
             }
         }
 

@@ -6,7 +6,6 @@
 import SwiftUI
 
 private enum CreateRoute: Hashable {
-  case typePicker
   case codeDetail(CreatedCodeRecord)
 }
 
@@ -24,7 +23,7 @@ struct CreateListView: View {
           ContentUnavailableView(
             "No codes yet",
             systemImage: "qrcode",
-            description: Text("Tap + to choose a type and create a code.")
+            description: Text("Tap + to create a code, then choose a type in the editor.")
           )
           .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -59,7 +58,9 @@ struct CreateListView: View {
       .toolbar {
         ToolbarItem(placement: .primaryAction) {
           Button {
-            path.append(CreateRoute.typePicker)
+            seedKind = nil
+            seedSocialURL = nil
+            showEditor = true
           } label: {
             Image(systemName: "plus")
               .font(.system(size: 20, weight: .semibold))
@@ -68,15 +69,6 @@ struct CreateListView: View {
       }
       .navigationDestination(for: CreateRoute.self) { route in
         switch route {
-        case .typePicker:
-          CreateTypePickerView { kind, social in
-            if path.count > 0 {
-              path.removeLast()
-            }
-            seedKind = kind
-            seedSocialURL = social
-            showEditor = true
-          }
         case .codeDetail(let record):
           CreatedCodeDetailView(record: record, model: model)
         }

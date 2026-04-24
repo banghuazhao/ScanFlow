@@ -51,16 +51,35 @@ struct CreateCodeEditorView: View {
   @State private var backgroundColor = Color.white
   @State private var centerPhotoItem: PhotosPickerItem?
   @State private var centerImageData: Data?
+  @State private var showTypePicker = false
 
   var body: some View {
     Form {
       Section("Type") {
-        Picker("Kind", selection: $kind) {
-          ForEach(CreatedCodeKind.allCases, id: \.self) { k in
-            Text(k.title).tag(k)
+        if isEdit {
+          HStack {
+            Text("Kind")
+            Spacer()
+            Text(kind.title)
+              .foregroundStyle(.secondary)
           }
+        } else {
+          Button {
+            showTypePicker = true
+          } label: {
+            HStack {
+              Text("Kind")
+              Spacer()
+              Text(kind.title)
+                .foregroundStyle(.secondary)
+              Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
         }
-        .disabled(isEdit)
       }
       contentSection
       previewSection
@@ -119,6 +138,19 @@ struct CreateCodeEditorView: View {
             centerImageData = data
             centerPhotoItem = nil
           }
+        }
+      }
+    }
+    .sheet(isPresented: $showTypePicker) {
+      NavigationStack {
+        CreateTypePickerView { picked, social in
+          if let s = social, !s.isEmpty {
+            kind = .social
+            socialURL = s
+          } else if let picked {
+            kind = picked
+          }
+          showTypePicker = false
         }
       }
     }
