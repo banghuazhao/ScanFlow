@@ -6,7 +6,8 @@
 import SwiftUI
 
 private enum CreateRoute: Hashable {
-  case codeDetail(CreatedCodeRecord)
+  /// Resolved from `CreateViewModel.codes` so the detail updates after edit without stale snapshots.
+  case codeDetail(id: Int)
 }
 
 struct CreateListView: View {
@@ -29,7 +30,7 @@ struct CreateListView: View {
         } else {
           List {
             ForEach(model.codes) { record in
-              NavigationLink(value: CreateRoute.codeDetail(record)) {
+              NavigationLink(value: CreateRoute.codeDetail(id: record.id)) {
                 CreatedCodeGlassRow(record: record)
               }
               .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -69,8 +70,17 @@ struct CreateListView: View {
       }
       .navigationDestination(for: CreateRoute.self) { route in
         switch route {
-        case .codeDetail(let record):
-          CreatedCodeDetailView(record: record, model: model)
+        case .codeDetail(let id):
+          if let record = model.codes.first(where: { $0.id == id }) {
+            CreatedCodeDetailView(record: record, model: model)
+              .id("\(record.id)-\(record.updatedAt.timeIntervalSince1970)")
+          } else {
+            ContentUnavailableView(
+              "Code unavailable",
+              systemImage: "qrcode",
+              description: Text("This code may have been removed.")
+            )
+          }
         }
       }
       .sheet(isPresented: $showEditor) {
