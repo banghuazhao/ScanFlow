@@ -3,6 +3,7 @@
 // Copyright Apps Bay Limited. All rights reserved.
 //
 
+import Photos
 import SwiftUI
 import UIKit
 
@@ -12,10 +13,11 @@ struct CreatedCodeDetailView: View {
     let model: CreateViewModel
 
     @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
-    @State private var showShare = false
-    @State private var shareItems: [Any] = []
     @State private var showEdit = false
     @State private var showCopiedToast = false
+    @State private var isSavingToPhotos = false
+    @State private var showSavedToast = false
+    @State private var showPhotoAccessDenied = false
 
     var body: some View {
         ScrollView {
@@ -28,9 +30,6 @@ struct CreatedCodeDetailView: View {
         .navigationTitle("Code")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
-        .sheet(isPresented: $showShare) {
-            ShareSheet(items: shareItems)
-        }
         .sheet(isPresented: $showEdit) {
             NavigationStack {
                 CreateCodeEditorView(
@@ -41,6 +40,12 @@ struct CreatedCodeDetailView: View {
             }
         }
         .copiedToast(isPresented: $showCopiedToast)
+        .copiedToast("Saved to Photos", isPresented: $showSavedToast)
+        .alert("Photos Access", isPresented: $showPhotoAccessDenied) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Allow access in Settings to save your code image to the library.")
+        }
     }
 
     private var isOpenable: Bool {
@@ -128,13 +133,12 @@ struct CreatedCodeDetailView: View {
                 secondaryPill(title: "Edit", systemName: "pencil") {
                     showEdit = true
                 }
-                secondaryPill(title: "Share", systemName: "square.and.arrow.up") {
-                    if let img = model.image(for: record) {
-                        shareItems = [record.payload, img]
-                    } else {
-                        shareItems = [record.payload]
-                    }
-                    showShare = true
+                secondaryPill(
+                    title: "Save to Photos",
+                    systemName: "photo.badge.arrow.down",
+                    isLoading: isSavingToPhotos
+                ) {
+                    Task { await saveCodeImageToPhotoLibrary() }
                 }
             }
 
@@ -174,12 +178,23 @@ struct CreatedCodeDetailView: View {
         .offset(y: -12)
     }
 
-    private func secondaryPill(title: String, systemName: String, action: @escaping () -> Void) -> some View {
+    private func secondaryPill(
+        title: String,
+        systemName: String,
+        isLoading: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: systemName)
+                if isLoading {
+                    ProgressView()
+                } else {
+                    Image(systemName: systemName)
+                }
                 Text(title)
                     .font(.body.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -190,6 +205,44 @@ struct CreatedCodeDetailView: View {
             }
         }
         .buttonStyle(.plain)
+        .disabled(isLoading)
+    }
+
+    @MainActor
+    private func saveCodeImageToPhotoLibrary() async {
+        guard !isSavingToPhotos else { return }
+        isSavingToPhotos = true
+        await Task.yield()
+        let image = model.image(for: record)
+        guard let image else {
+            isSavingToPhotos = false
+            return
+        }
+
+        var status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        if status == .notDetermined {
+            status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        }
+        guard status == .authorized else {
+            isSavingToPhotos = false
+            if status == .denied || status == .restricted {
+                showPhotoAccessDenied = true
+            }
+            return
+        }
+
+        let saved = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, _ in
+                cont.resume(returning: success)
+            }
+        }
+        isSavingToPhotos = false
+        if saved {
+            Haptics.light(enabled: hapticsEnabled)
+            showSavedToast = true
+        }
     }
 
     private func openPayload() {

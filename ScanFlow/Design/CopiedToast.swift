@@ -7,12 +7,13 @@ import SwiftUI
 
 struct CopiedToastModifier: ViewModifier {
   @Binding var isPresented: Bool
+  var message: String
 
   func body(content: Content) -> some View {
     content
       .overlay(alignment: .center) {
         if isPresented {
-          Text("Copied")
+          Text(message)
             .font(.subheadline.weight(.semibold))
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
@@ -33,7 +34,7 @@ struct CopiedToastModifier: ViewModifier {
 }
 
 extension View {
-  func copiedToast(isPresented: Binding<Bool>) -> some View {
-    modifier(CopiedToastModifier(isPresented: isPresented))
+  func copiedToast(_ message: String = "Copied", isPresented: Binding<Bool>) -> some View {
+    modifier(CopiedToastModifier(isPresented: isPresented, message: message))
   }
 }

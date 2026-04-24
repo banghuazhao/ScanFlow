@@ -266,6 +266,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "ScanFlow uses the camera to scan QR codes and barcodes.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "ScanFlow saves your created code image to your library when you choose Save to Photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ScanFlow needs photo library access to scan codes from images you choose.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -300,6 +301,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "ScanFlow uses the camera to scan QR codes and barcodes.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "ScanFlow saves your created code image to your library when you choose Save to Photos.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ScanFlow needs photo library access to scan codes from images you choose.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
