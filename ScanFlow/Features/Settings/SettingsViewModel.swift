@@ -12,10 +12,17 @@ final class SettingsViewModel {
   @ObservationIgnored
   @Dependency(\.defaultDatabase) private var database
 
-  func deleteAllData() {
+  func deleteAllScanRecords() {
     do {
       try database.write { db in
         try db.execute(sql: "DELETE FROM scan_records")
+      }
+    } catch {}
+  }
+
+  func deleteAllCreatedCodes() {
+    do {
+      try database.write { db in
         try db.execute(sql: "DELETE FROM created_codes")
       }
     } catch {}

@@ -8,7 +8,8 @@ import SwiftUI
 struct SettingsView: View {
   @AppStorage("scanflow.startWithCamera") private var startWithCamera = true
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
-  @State private var showDeleteConfirm = false
+  @State private var showDeleteScansConfirm = false
+  @State private var showDeleteCreatedConfirm = false
   @State private var model = SettingsViewModel()
 
   var body: some View {
@@ -19,25 +20,42 @@ struct SettingsView: View {
           Toggle("Haptics", isOn: $hapticsEnabled)
         }
         Section {
-          Button("Delete all data", role: .destructive) {
-            showDeleteConfirm = true
+          Button("Delete all scan history", role: .destructive) {
+            showDeleteScansConfirm = true
+          }
+          Button("Delete all created codes", role: .destructive) {
+            showDeleteCreatedConfirm = true
           }
         } footer: {
-          Text("Removes scan history and created codes from this device.")
+          Text("Each action only affects that list on this device. Scan history is shown in History; created codes are in Create.")
         }
       }
       .scrollContentBackground(.hidden)
       .scanflowScreenBackground()
       .navigationTitle("Settings")
       .confirmationDialog(
-        "Delete all data?",
-        isPresented: $showDeleteConfirm,
+        "Delete all scan history?",
+        isPresented: $showDeleteScansConfirm,
         titleVisibility: .visible
       ) {
-        Button("Delete everything", role: .destructive) {
-          model.deleteAllData()
+        Button("Delete scan history", role: .destructive) {
+          model.deleteAllScanRecords()
         }
         Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("This removes every item in History. It cannot be undone.")
+      }
+      .confirmationDialog(
+        "Delete all created codes?",
+        isPresented: $showDeleteCreatedConfirm,
+        titleVisibility: .visible
+      ) {
+        Button("Delete created codes", role: .destructive) {
+          model.deleteAllCreatedCodes()
+        }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("This removes every code you created. It cannot be undone.")
       }
     }
   }
