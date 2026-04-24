@@ -50,14 +50,7 @@ struct ScanView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 48, height: 48)
-                .background {
-                  Circle()
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                      Circle()
-                        .strokeBorder(.white.opacity(0.22), lineWidth: 1)
-                    }
-                }
+                .glassEffect(.regular.interactive(), in: Circle())
             }
             .buttonStyle(.plain)
           }
@@ -119,12 +112,8 @@ struct ScanView: View {
     .padding(6)
     .background {
       RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-        .fill(.ultraThinMaterial)
-        .overlay {
-          RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-            .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
+        .fill(.clear)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
     }
   }
 

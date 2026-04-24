@@ -26,8 +26,7 @@ struct CreatedCodeDetailView: View {
     .background(Color(.systemGroupedBackground))
     .navigationTitle("Code")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarBackground(.hidden, for: .navigationBar)
-    .toolbarColorScheme(.dark, for: .navigationBar)
+    .toolbarBackground(.visible, for: .navigationBar)
     .sheet(isPresented: $showShare) {
       ShareSheet(items: shareItems)
     }
@@ -43,32 +42,30 @@ struct CreatedCodeDetailView: View {
   }
 
   private var headerSection: some View {
-    ZStack {
-      LiquidGlass.headerGradient
-      VStack(spacing: 18) {
-        Text(record.displayLabel)
-          .font(.headline.weight(.bold))
-          .foregroundStyle(.white)
-          .lineLimit(1)
-          .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+    VStack(spacing: 18) {
+      Text(record.displayLabel)
+        .font(.headline.weight(.bold))
+        .foregroundStyle(.primary)
+        .lineLimit(1)
 
-        if let ui = model.image(for: record) {
-          Image(uiImage: ui)
-            .resizable()
-            .interpolation(.none)
-            .scaledToFit()
-            .padding(18)
-            .frame(maxWidth: 260, maxHeight: 260)
-            .background {
-              RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
-            }
-        }
+      if let ui = model.image(for: record) {
+        Image(uiImage: ui)
+          .resizable()
+          .interpolation(.none)
+          .scaledToFit()
+          .padding(18)
+          .frame(maxWidth: 260, maxHeight: 260)
+          .background {
+            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+              .fill(Color.white)
+              .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+          }
       }
-      .padding(.horizontal, 20)
-      .padding(.bottom, 28)
     }
+    .padding(.horizontal, 20)
+    .padding(.bottom, 28)
+    .frame(maxWidth: .infinity)
+    .background(.regularMaterial)
   }
 
   private var contentSection: some View {
@@ -177,8 +174,8 @@ struct CreatedCodeDetailView: View {
       .padding(.vertical, 14)
       .background {
         RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-          .fill(.ultraThinMaterial)
-          .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
+          .fill(.clear)
+          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
       }
     }
     .buttonStyle(.plain)

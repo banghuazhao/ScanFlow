@@ -148,9 +148,9 @@ struct CreateTypePickerView: View {
     } label: {
       VStack(spacing: 10) {
         RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-          .fill(.ultraThinMaterial)
-          .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
+          .fill(.clear)
           .frame(height: 72)
+          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
           .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
               .fill(Color.blue.opacity(0.2))

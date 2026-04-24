@@ -47,6 +47,8 @@ struct CreateCodeEditorView: View {
   @State private var socialURL = ""
 
   @State private var style = CodeStyleConfiguration.default
+  @State private var foregroundColor = Color.black
+  @State private var backgroundColor = Color.white
   @State private var centerPhotoItem: PhotosPickerItem?
   @State private var centerImageData: Data?
 
@@ -63,10 +65,8 @@ struct CreateCodeEditorView: View {
       contentSection
       previewSection
       Section("Appearance") {
-        TextField("Foreground (#RRGGBB)", text: $style.foregroundHex)
-          .textInputAutocapitalization(.never)
-        TextField("Background (#RRGGBB)", text: $style.backgroundHex)
-          .textInputAutocapitalization(.never)
+        ColorPicker("Foreground", selection: $foregroundColor, supportsOpacity: false)
+        ColorPicker("Background", selection: $backgroundColor, supportsOpacity: false)
         Picker("Pixels", selection: $style.moduleShape) {
           Text("Square").tag(CodeModuleShape.square)
           Text("Rounded").tag(CodeModuleShape.rounded)
@@ -105,6 +105,12 @@ struct CreateCodeEditorView: View {
       }
     }
     .onAppear(perform: load)
+    .onChange(of: foregroundColor) { _, newValue in
+      style.foregroundHex = newValue.rgbHexString()
+    }
+    .onChange(of: backgroundColor) { _, newValue in
+      style.backgroundHex = newValue.rgbHexString()
+    }
     .onChange(of: centerPhotoItem) { _, new in
       guard let new else { return }
       Task {
@@ -308,6 +314,12 @@ struct CreateCodeEditorView: View {
       centerImageData = record.centerImageData
       splitPayload(record)
     }
+    syncColorsFromStyle()
+  }
+
+  private func syncColorsFromStyle() {
+    foregroundColor = Color(rgbHex: style.foregroundHex) ?? .black
+    backgroundColor = Color(rgbHex: style.backgroundHex) ?? .white
   }
 
   private func splitPayload(_ record: CreatedCodeRecord) {

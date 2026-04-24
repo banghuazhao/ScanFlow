@@ -70,8 +70,8 @@ struct HistoryView: View {
               .listRowSeparator(.hidden)
               .listRowBackground(
                 RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                  .fill(.ultraThinMaterial)
-                  .shadow(color: .black.opacity(0.07), radius: 10, y: 4)
+                  .fill(.clear)
+                  .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
                   .padding(.vertical, 4)
               )
             }

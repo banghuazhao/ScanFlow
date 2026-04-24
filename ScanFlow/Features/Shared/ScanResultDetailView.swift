@@ -34,58 +34,52 @@ struct ScanResultDetailView: View {
           Button(action: onDismiss) {
             Image(systemName: "xmark")
               .font(.system(size: 15, weight: .semibold))
-              .foregroundStyle(.white)
+              .foregroundStyle(.primary)
               .frame(width: 34, height: 34)
-              .background(Circle().fill(.ultraThinMaterial))
+              .glassEffect(.regular, in: Circle())
           }
         }
       }
     }
-    .toolbarBackground(.hidden, for: .navigationBar)
-    .toolbarColorScheme(.dark, for: .navigationBar)
+    .toolbarBackground(.visible, for: .navigationBar)
     .sheet(isPresented: $showShare) {
       ShareSheet(items: shareItems)
     }
   }
 
   private var headerSection: some View {
-    ZStack {
-      LiquidGlass.headerGradient
-      VStack(spacing: 18) {
-        Text(headerTitle)
-          .font(.headline.weight(.bold))
-          .foregroundStyle(.white)
-          .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
-          .padding(.top, 4)
+    VStack(spacing: 18) {
+      Text(headerTitle)
+        .font(.headline.weight(.bold))
+        .foregroundStyle(.primary)
+        .padding(.top, 4)
 
-        Group {
-          if let previewImage {
-            Image(uiImage: previewImage)
-              .resizable()
-              .interpolation(.none)
-              .scaledToFit()
-              .padding(18)
-              .frame(maxWidth: 260, maxHeight: 260)
-              .background {
-                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                  .fill(Color.white)
-                  .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
-              }
-          } else {
-            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium)
-              .fill(Color.white.opacity(0.2))
-              .frame(width: 200, height: 200)
-              .overlay {
-                Image(systemName: "qrcode")
-                  .font(.largeTitle)
-                  .foregroundStyle(.white.opacity(0.8))
-              }
-          }
+      Group {
+        if let previewImage {
+          Image(uiImage: previewImage)
+            .resizable()
+            .interpolation(.none)
+            .scaledToFit()
+            .padding(18)
+            .frame(maxWidth: 260, maxHeight: 260)
+            .background {
+              RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
+            }
+        } else {
+          Image(systemName: "qrcode")
+            .font(.system(size: 72))
+            .foregroundStyle(.secondary)
+            .frame(width: 200, height: 200)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
         }
       }
-      .padding(.horizontal, 20)
-      .padding(.bottom, 28)
     }
+    .padding(.horizontal, 20)
+    .padding(.bottom, 28)
+    .frame(maxWidth: .infinity)
+    .background(.regularMaterial)
   }
 
   private var headerTitle: String {
@@ -206,8 +200,8 @@ struct ScanResultDetailView: View {
       .padding(.vertical, 14)
       .background {
         RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-          .fill(.ultraThinMaterial)
-          .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
+          .fill(.clear)
+          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
       }
     }
     .buttonStyle(.plain)
