@@ -8,6 +8,8 @@ import SwiftUI
 import UIKit
 
 struct BarcodeScannerView: UIViewRepresentable {
+  /// Stops the capture session while a scan result sheet (or any blocking UI) is shown.
+  var isSessionPaused: Bool
   var onScan: (String, AVMetadataObject.ObjectType) -> Void
 
   func makeCoordinator() -> Coordinator {
@@ -26,6 +28,10 @@ struct BarcodeScannerView: UIViewRepresentable {
 
   func updateUIView(_ uiView: ScannerPreviewView, context: Context) {
     context.coordinator.onScan = onScan
+    let paused = isSessionPaused
+    context.coordinator.sessionQueue.async { [coordinator = context.coordinator] in
+      coordinator.setSessionPaused(paused)
+    }
   }
 
   final class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
@@ -34,6 +40,7 @@ struct BarcodeScannerView: UIViewRepresentable {
     let sessionQueue = DispatchQueue(label: "com.scanflow.camera.session")
     var previewView: ScannerPreviewView?
     var onScan: (String, AVMetadataObject.ObjectType) -> Void
+    var isSessionPaused: Bool = false
 
     init(onScan: @escaping (String, AVMetadataObject.ObjectType) -> Void) {
       self.onScan = onScan
@@ -79,7 +86,9 @@ struct BarcodeScannerView: UIViewRepresentable {
         metadataOutput.metadataObjectTypes = wanted.filter { metadataOutput.availableMetadataObjectTypes.contains($0) }
       }
       session.commitConfiguration()
-      if !session.isRunning {
+      if isSessionPaused {
+        // The result sheet is already up; do not start until `setSessionPaused(false)`.
+      } else if !session.isRunning {
         session.startRunning()
       }
       let sessionRef = self.session
@@ -87,6 +96,17 @@ struct BarcodeScannerView: UIViewRepresentable {
         guard let preview else { return }
         preview.previewLayer.session = sessionRef
       }
+    }
+
+    /// Call only from `sessionQueue`. Pauses or resumes the session when the result sheet is presented or dismissed.
+    func setSessionPaused(_ paused: Bool) {
+      isSessionPaused = paused
+      if paused {
+        if session.isRunning { session.stopRunning() }
+        return
+      }
+      guard !session.inputs.isEmpty else { return }
+      if !session.isRunning { session.startRunning() }
     }
 
     private static func preferredBackCamera() -> AVCaptureDevice? {
@@ -109,6 +129,7 @@ struct BarcodeScannerView: UIViewRepresentable {
       didOutput metadataObjects: [AVMetadataObject],
       from connection: AVCaptureConnection
     ) {
+      if isSessionPaused { return }
       guard let obj = metadataObjects.first as? AVMetadataMachineReadableCodeObject,
             let value = obj.stringValue
       else { return }

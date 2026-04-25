@@ -38,7 +38,7 @@ struct ScanView: View {
         }
         .scanflowScreenBackground()
       } else {
-        BarcodeScannerView { value, type in
+        BarcodeScannerView(isSessionPaused: model.scanDetailPresented) { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .id(model.cameraScannerViewID)

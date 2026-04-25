@@ -33,11 +33,18 @@ struct ScanResultDetailView: View {
             if showDismissButton {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: onDismiss) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 34, height: 34)
-                            .glassEffect(.regular, in: Circle())
+                        if #available(iOS 26.0, *) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: 34, height: 34)
+                                .glassEffect(.regular, in: Circle())
+                        } else {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .frame(width: 34, height: 34)
+                        }
                     }
                 }
             }
@@ -70,11 +77,18 @@ struct ScanResultDetailView: View {
                                 .shadow(color: .black.opacity(0.12), radius: 16, y: 8)
                         }
                 } else {
-                    Image(systemName: "qrcode")
-                        .font(.system(size: 72))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 200, height: 200)
-                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                    if #available(iOS 26.0, *) {
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 72))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 200, height: 200)
+                            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                    } else {
+                        Image(systemName: "qrcode")
+                            .font(.system(size: 72))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 200, height: 200)
+                    }
                 }
             }
         }
@@ -179,9 +193,14 @@ struct ScanResultDetailView: View {
                         .padding(.vertical, 14)
                         .foregroundStyle(.red)
                         .background {
-                            RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                                .fill(.clear)
-                                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                            if #available(iOS 26.0, *) {
+                                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                                    .fill(.clear)
+                                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                            } else {
+                                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                                    .fill(.clear)
+                            }
                         }
                 }
                 .buttonStyle(.plain)
@@ -216,9 +235,14 @@ struct ScanResultDetailView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background {
-                RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                        .fill(.clear)
+                        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous)
+                        .fill(.clear)
+                }
             }
         }
         .buttonStyle(.plain)

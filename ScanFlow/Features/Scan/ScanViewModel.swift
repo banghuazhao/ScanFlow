@@ -89,6 +89,7 @@ final class ScanViewModel {
   }
 
   func handleScan(value: String, avType: AVMetadataObject.ObjectType, hapticsEnabled: Bool) {
+    if scanDetailPresented { return }
     let sym = avType.rawValue.replacingOccurrences(of: "AVMetadataObjectType", with: "")
     let now = Date()
     if now < throttleUntil, lastScannedValue == value { return }
@@ -102,6 +103,7 @@ final class ScanViewModel {
   }
 
   func handlePhotoScan(results: [DecodedBarcode], hapticsEnabled: Bool) {
+    if scanDetailPresented { return }
     guard let first = results.first else { return }
     lastScannedValue = first.payload
     lastSymbology = first.symbology
