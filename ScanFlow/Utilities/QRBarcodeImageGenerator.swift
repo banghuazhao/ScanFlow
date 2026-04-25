@@ -42,16 +42,17 @@ enum QRBarcodeImageGenerator {
       )
     }
 
+    // Do not draw over the three finder patterns ("pupil" styling). Overpainting the 7×7
+    // corners breaks ISO 18004 and real scanners (camera + AVFoundation) often fail to decode.
     var ui = withModules
-    ui = drawPupilOverlay(on: ui, style: style.pupilShape, foreground: fg, background: bg) ?? ui
 
     if style.centerMode != .none {
       if let centerImage {
-        ui = overlayCenterLogo(on: ui, logo: centerImage, foreground: fg) ?? ui
+        ui = overlayCenterLogo(on: ui, logo: centerImage, background: bg) ?? ui
       } else if style.centerMode == .auto {
         let symbol = UIImage(systemName: "qrcode")?.withTintColor(fg, renderingMode: .alwaysOriginal)
         if let symbol {
-          ui = overlayCenterLogo(on: ui, logo: symbol, foreground: fg) ?? ui
+          ui = overlayCenterLogo(on: ui, logo: symbol, background: bg) ?? ui
         }
       }
     }
@@ -255,13 +256,12 @@ enum QRBarcodeImageGenerator {
     guard let colored = applyFalseColor(image: scaled, foreground: fg, background: bg) else { return nil }
     guard let cgi = context.createCGImage(colored, from: colored.extent) else { return nil }
     var ui = UIImage(cgImage: cgi, scale: 1, orientation: .up)
-    ui = drawPupilOverlay(on: ui, style: style.pupilShape, foreground: fg, background: bg) ?? ui
     if style.centerMode != .none {
       if let centerImage {
-        ui = overlayCenterLogo(on: ui, logo: centerImage, foreground: fg) ?? ui
+        ui = overlayCenterLogo(on: ui, logo: centerImage, background: bg) ?? ui
       } else if style.centerMode == .auto {
         if let s = UIImage(systemName: "qrcode")?.withTintColor(fg, renderingMode: .alwaysOriginal) {
-          ui = overlayCenterLogo(on: ui, logo: s, foreground: fg) ?? ui
+          ui = overlayCenterLogo(on: ui, logo: s, background: bg) ?? ui
         }
       }
     }
@@ -289,53 +289,11 @@ enum QRBarcodeImageGenerator {
     return UIImage(cgImage: cgImage, scale: 1, orientation: .up)
   }
 
-  private static func drawPupilOverlay(
-    on image: UIImage,
-    style: CodePupilShape,
-    foreground: UIColor,
+  private static func overlayCenterLogo(
+    on qr: UIImage,
+    logo: UIImage,
     background: UIColor
   ) -> UIImage? {
-    let s = image.size
-    UIGraphicsBeginImageContextWithOptions(s, false, image.scale)
-    defer { UIGraphicsEndImageContext() }
-    guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
-    image.draw(in: CGRect(origin: .zero, size: s))
-
-    let patch = min(s.width, s.height) * 0.26
-    let inset = min(s.width, s.height) * 0.065
-    let corners: [CGPoint] = [
-      CGPoint(x: inset, y: inset),
-      CGPoint(x: s.width - inset - patch, y: inset),
-      CGPoint(x: inset, y: s.height - inset - patch),
-    ]
-
-    for origin in corners {
-      let r = CGRect(origin: origin, size: CGSize(width: patch, height: patch))
-      ctx.setFillColor(background.cgColor)
-      fillPupil(rect: r, style: style, in: ctx, color: background)
-      let inner = r.insetBy(dx: r.width * 0.18, dy: r.height * 0.18)
-      ctx.setFillColor(foreground.cgColor)
-      fillPupil(rect: inner, style: style, in: ctx, color: foreground)
-    }
-
-    return UIGraphicsGetImageFromCurrentImageContext()
-  }
-
-  private static func fillPupil(rect: CGRect, style: CodePupilShape, in ctx: CGContext, color: UIColor) {
-    ctx.setFillColor(color.cgColor)
-    switch style {
-    case .square:
-      ctx.fill(rect)
-    case .rounded:
-      let p = UIBezierPath(roundedRect: rect, cornerRadius: rect.width * 0.18)
-      ctx.addPath(p.cgPath)
-      ctx.fillPath()
-    case .circle:
-      ctx.fillEllipse(in: rect)
-    }
-  }
-
-  private static func overlayCenterLogo(on qr: UIImage, logo: UIImage, foreground: UIColor) -> UIImage? {
     let size = qr.size
     UIGraphicsBeginImageContextWithOptions(size, false, qr.scale)
     defer { UIGraphicsEndImageContext() }
@@ -346,7 +304,7 @@ enum QRBarcodeImageGenerator {
     let pad: CGFloat = 6
     let bgRect = CGRect(x: origin.x - pad, y: origin.y - pad, width: side + pad * 2, height: side + pad * 2)
     let p = UIBezierPath(roundedRect: bgRect, cornerRadius: 8)
-    UIColor.white.setFill()
+    background.setFill()
     p.fill()
 
     logo.draw(in: CGRect(origin: origin, size: CGSize(width: side, height: side)))

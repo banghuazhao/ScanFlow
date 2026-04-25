@@ -183,19 +183,6 @@ struct CreateCodeEditorView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
                 HStack {
-                    Text("Eyes")
-                    Spacer()
-                    Picker("Eyes", selection: $style.pupilShape) {
-                        Text("Square").tag(CodePupilShape.square)
-                        Text("Rounded").tag(CodePupilShape.rounded)
-                        Text("Circle").tag(CodePupilShape.circle)
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                HStack {
                     Text("Center")
                     Spacer()
                     Picker("Center", selection: $style.centerMode) {

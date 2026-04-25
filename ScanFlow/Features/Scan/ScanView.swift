@@ -38,8 +38,7 @@ struct ScanView: View {
         }
         .scanflowScreenBackground()
       } else {
-        // Torch hidden: device LED with AVCaptureSession is unreliable in the field; re-enable when fixed.
-        BarcodeScannerView(isTorchOn: .constant(false)) { value, type in
+        BarcodeScannerView { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .id(model.cameraScannerViewID)
@@ -53,12 +52,14 @@ struct ScanView: View {
 
             PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
               Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 48, height: 48)
+                .frame(minWidth: 48, minHeight: 48)
+                .contentShape(Circle())
                 .glassEffect(.regular.interactive(), in: Circle())
             }
-            .buttonStyle(.plain)
+            // `.plain` with `glassEffect` can eat the first touch on some iOS versions; `borderless` is more reliable.
+            .buttonStyle(.borderless)
           }
           .padding(.horizontal, 20)
           .padding(.top, 12)
