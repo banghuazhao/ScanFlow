@@ -3,12 +3,13 @@
 // Copyright Apps Bay Limited. All rights reserved.
 //
 
-import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
 
 struct ScanView: View {
+  @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.openURL) private var openURL
   @Bindable var model: ScanViewModel
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
   @State private var photoItem: PhotosPickerItem?
@@ -16,18 +17,32 @@ struct ScanView: View {
 
   var body: some View {
     ZStack {
-      if model.cameraDenied {
-        ContentUnavailableView(
-          "Camera unavailable",
-          systemImage: "camera.fill",
-          description: Text("Allow camera access in Settings to scan codes.")
-        )
+      if shouldShowCameraDeniedPlaceholder {
+        ContentUnavailableView {
+          Label(cameraDeniedTitle, systemImage: "camera.fill")
+        } description: {
+          cameraDeniedDescription
+        } actions: {
+          VStack(spacing: 12) {
+            if model.cameraAccess == .denied, let url = URL(string: UIApplication.openSettingsURLString) {
+              Button("Open Settings") {
+                openURL(url)
+              }
+              .buttonStyle(.borderedProminent)
+            }
+            PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
+              Label("Scan a photo from your library", systemImage: "photo.on.rectangle")
+            }
+            .buttonStyle(.bordered)
+          }
+        }
         .scanflowScreenBackground()
       } else {
         // Torch hidden: device LED with AVCaptureSession is unreliable in the field; re-enable when fixed.
         BarcodeScannerView(isTorchOn: .constant(false)) { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
+        .id(model.cameraScannerViewID)
         .ignoresSafeArea()
 
         ScanViewfinderOverlay()
@@ -67,6 +82,11 @@ struct ScanView: View {
       }
     }
     .onAppear { model.checkCameraAuthorization() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active {
+        model.checkCameraAuthorization()
+      }
+    }
     .onChange(of: photoItem) { _, new in
       guard let new else { return }
       Task {
@@ -88,6 +108,32 @@ struct ScanView: View {
           )
         }
       }
+    }
+  }
+
+  private var shouldShowCameraDeniedPlaceholder: Bool {
+    model.cameraAccess == .denied || model.cameraAccess == .restricted
+  }
+
+  private var cameraDeniedTitle: String {
+    switch model.cameraAccess {
+    case .denied:
+      "Camera off"
+    case .restricted:
+      "Camera restricted"
+    default:
+      "Camera unavailable"
+    }
+  }
+
+  private var cameraDeniedDescription: Text {
+    switch model.cameraAccess {
+    case .denied:
+      Text("To scan with the camera, allow access for ScanFlow in Settings. You can still scan codes from a photo in your library.")
+    case .restricted:
+      Text("This device or profile does not allow camera use (for example Screen Time or device management). You can still try scanning a code from a photo in your library.")
+    default:
+      Text("Camera is not available.")
     }
   }
 

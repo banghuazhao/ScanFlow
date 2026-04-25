@@ -10,9 +10,20 @@ import Observation
 import SQLiteData
 import UIKit
 
+enum CameraAccess: Equatable {
+  /// System permission dialog not answered yet, or we have not re-checked.
+  case undetermined
+  case authorized
+  case denied
+  case restricted
+}
+
 @Observable @MainActor
 final class ScanViewModel {
-  var cameraDenied = false
+  /// Bumped when camera goes from "waiting for permission" to `authorized` so the capture session is recreated.
+  var cameraScannerViewID: Int = 0
+
+  var cameraAccess: CameraAccess
   var lastScannedValue: String?
   var lastSymbology: String?
   var lastPreviewImage: UIImage?
@@ -24,18 +35,56 @@ final class ScanViewModel {
   @ObservationIgnored
   @Dependency(\.defaultDatabase) private var database
 
-  func checkCameraAuthorization() {
+  /// Prevents `requestAccess` from being invoked twice in the same notDetermined window (e.g. `onAppear` + `scenePhase`).
+  @ObservationIgnored
+  private var didRequestCameraAccess = false
+
+  init() {
+    cameraAccess = Self.currentCameraAccess()
+  }
+
+  private static func currentCameraAccess() -> CameraAccess {
     switch AVCaptureDevice.authorizationStatus(for: .video) {
     case .authorized:
-      cameraDenied = false
+      return .authorized
     case .notDetermined:
-      AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
-        Task { @MainActor in
-          self?.cameraDenied = !granted
+      return .undetermined
+    case .denied:
+      return .denied
+    case .restricted:
+      return .restricted
+    @unknown default:
+      return .denied
+    }
+  }
+
+  func checkCameraAuthorization() {
+    let status = AVCaptureDevice.authorizationStatus(for: .video)
+    switch status {
+    case .authorized:
+      cameraAccess = .authorized
+    case .notDetermined:
+      cameraAccess = .undetermined
+      if !didRequestCameraAccess {
+        didRequestCameraAccess = true
+        AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+          Task { @MainActor in
+            guard let self else { return }
+            if granted {
+              self.cameraAccess = .authorized
+              self.cameraScannerViewID &+= 1
+            } else {
+              self.cameraAccess = .denied
+            }
+          }
         }
       }
-    default:
-      cameraDenied = true
+    case .denied:
+      cameraAccess = .denied
+    case .restricted:
+      cameraAccess = .restricted
+    @unknown default:
+      cameraAccess = .denied
     }
   }
 
