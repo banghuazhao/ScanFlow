@@ -3,6 +3,7 @@
 // Copyright Apps Bay Limited. All rights reserved.
 //
 
+import Photos
 import SwiftUI
 import UIKit
 
@@ -15,8 +16,9 @@ struct ScanResultDetailView: View {
     var onDelete: (() -> Void)? = nil
 
     @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
-    @State private var showShare = false
-    @State private var shareItems: [Any] = []
+    @State private var isSavingToPhotos = false
+    @State private var showSavedToast = false
+    @State private var showPhotoAccessDenied = false
     @State private var showCopiedToast = false
 
     var body: some View {
@@ -50,10 +52,13 @@ struct ScanResultDetailView: View {
             }
         }
         .toolbarBackground(.visible, for: .navigationBar)
-        .sheet(isPresented: $showShare) {
-            ShareSheet(items: shareItems)
-        }
         .copiedToast(isPresented: $showCopiedToast)
+        .copiedToast("Saved to Photos", isPresented: $showSavedToast)
+        .alert("Photos Access", isPresented: $showPhotoAccessDenied) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Allow access in Settings to save your code image to the library.")
+        }
     }
 
     private var headerSection: some View {
@@ -176,13 +181,13 @@ struct ScanResultDetailView: View {
                         openValue()
                     }
                 }
-                actionPill(title: "Share", systemName: "square.and.arrow.up", role: nil) {
-                    if let img = previewImage ?? synthesizedImage() {
-                        shareItems = [rawValue, img]
-                    } else {
-                        shareItems = [rawValue]
-                    }
-                    showShare = true
+                actionPill(
+                    title: "Save to Photos",
+                    systemName: "photo.badge.arrow.down",
+                    role: nil,
+                    isLoading: isSavingToPhotos
+                ) {
+                    Task { await saveScanImageToPhotoLibrary() }
                 }
             }
 
@@ -227,12 +232,24 @@ struct ScanResultDetailView: View {
         .offset(y: -12)
     }
 
-    private func actionPill(title: String, systemName: String, role: ButtonRole?, action: @escaping () -> Void) -> some View {
+    private func actionPill(
+        title: String,
+        systemName: String,
+        role: ButtonRole?,
+        isLoading: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(role: role, action: action) {
             HStack(spacing: 8) {
-                Image(systemName: systemName)
+                if isLoading {
+                    ProgressView()
+                } else {
+                    Image(systemName: systemName)
+                }
                 Text(title)
                     .font(.body.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -249,6 +266,44 @@ struct ScanResultDetailView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .disabled(isLoading)
+    }
+
+    @MainActor
+    private func saveScanImageToPhotoLibrary() async {
+        guard !isSavingToPhotos else { return }
+        isSavingToPhotos = true
+        await Task.yield()
+        let image = previewImage ?? synthesizedImage()
+        guard let image else {
+            isSavingToPhotos = false
+            return
+        }
+
+        var status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        if status == .notDetermined {
+            status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        }
+        guard status == .authorized else {
+            isSavingToPhotos = false
+            if status == .denied || status == .restricted {
+                showPhotoAccessDenied = true
+            }
+            return
+        }
+
+        let saved = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, _ in
+                cont.resume(returning: success)
+            }
+        }
+        isSavingToPhotos = false
+        if saved {
+            Haptics.light(enabled: hapticsEnabled)
+            showSavedToast = true
+        }
     }
 
     private func synthesizedImage() -> UIImage? {
@@ -269,14 +324,4 @@ struct ScanResultDetailView: View {
         guard let u = OpenDestination.url(for: rawValue) else { return }
         UIApplication.shared.open(u)
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    var items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
