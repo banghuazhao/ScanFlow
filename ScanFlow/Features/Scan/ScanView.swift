@@ -32,6 +32,8 @@ struct ScanView: View {
             }
             PhotosPicker(selection: $photoItem, matching: .images, photoLibrary: .shared()) {
               Label("Scan a photo from your library", systemImage: "photo.on.rectangle")
+                .frame(maxWidth: .infinity, alignment: .center)
+                .contentShape(.rect)
             }
             .buttonStyle(.bordered)
           }

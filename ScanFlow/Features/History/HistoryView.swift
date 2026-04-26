@@ -147,7 +147,9 @@ private struct HistoryGlassRow: View {
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
+      Spacer(minLength: 0)
     }
     .padding(.vertical, 6)
+    .contentShape(.rect)
   }
 }

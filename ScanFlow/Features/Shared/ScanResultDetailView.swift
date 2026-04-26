@@ -164,6 +164,7 @@ struct ScanResultDetailView: View {
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.tertiary)
                         }
+                        .contentShape(.rect)
                     }
                 }
                 .buttonStyle(.plain)
@@ -202,6 +203,7 @@ struct ScanResultDetailView: View {
                                     .fill(.clear)
                             }
                         }
+                        .contentShape(.rect)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 4)
@@ -244,6 +246,7 @@ struct ScanResultDetailView: View {
                         .fill(.clear)
                 }
             }
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }

@@ -156,6 +156,7 @@ struct CreatedCodeDetailView: View {
                             .fill(.clear)
                             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
                     }
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
@@ -203,6 +204,7 @@ struct CreatedCodeDetailView: View {
                     .fill(.clear)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: LiquidGlass.cornerMedium, style: .continuous))
             }
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .disabled(isLoading)
