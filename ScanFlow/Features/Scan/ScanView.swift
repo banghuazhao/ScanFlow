@@ -14,6 +14,7 @@ struct ScanView: View {
   @AppStorage("scanflow.hapticsEnabled") private var hapticsEnabled = true
   @State private var photoItem: PhotosPickerItem?
   @State private var photoLoadError = false
+  @State private var isDecodingPhoto = false
 
   var body: some View {
     ZStack {
@@ -40,7 +41,7 @@ struct ScanView: View {
         }
         .scanflowScreenBackground()
       } else {
-        BarcodeScannerView(isSessionPaused: model.scanDetailPresented) { value, type in
+        BarcodeScannerView(isSessionPaused: model.scanDetailPresented || isDecodingPhoto) { value, type in
           model.handleScan(value: value, avType: type, hapticsEnabled: hapticsEnabled)
         }
         .id(model.cameraScannerViewID)
@@ -81,6 +82,22 @@ struct ScanView: View {
             .padding(.bottom, 12)
 
           Spacer(minLength: 120)
+        }
+
+        if isDecodingPhoto {
+          Color.black.opacity(0.4)
+            .ignoresSafeArea()
+            .allowsHitTesting(true)
+          VStack(spacing: 14) {
+            ProgressView()
+              .tint(.white)
+              .controlSize(.large)
+            Text("Reading photo…")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(.white)
+          }
+          .accessibilityElement(children: .combine)
+          .accessibilityLabel("Reading photo")
         }
       }
     }
@@ -141,10 +158,19 @@ struct ScanView: View {
   }
 
   private func loadPhoto(item: PhotosPickerItem) async {
+    await MainActor.run { isDecodingPhoto = true }
+    defer {
+      Task { @MainActor in
+        isDecodingPhoto = false
+      }
+    }
     do {
       guard let data = try await item.loadTransferable(type: Data.self),
             let image = UIImage(data: data)
-      else { return }
+      else {
+        await MainActor.run { photoItem = nil }
+        return
+      }
       let results = try await BarcodePhotoDecoder.decode(image: image)
       await MainActor.run {
         if results.isEmpty {

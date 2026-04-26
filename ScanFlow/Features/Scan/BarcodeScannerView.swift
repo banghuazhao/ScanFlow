@@ -8,7 +8,7 @@ import SwiftUI
 import UIKit
 
 struct BarcodeScannerView: UIViewRepresentable {
-  /// Stops the capture session while a scan result sheet (or any blocking UI) is shown.
+  /// Stops the capture session while a result sheet is shown or a photo is being decoded (avoids overlapping work and stray scans).
   var isSessionPaused: Bool
   var onScan: (String, AVMetadataObject.ObjectType) -> Void
 
