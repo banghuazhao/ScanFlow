@@ -10,32 +10,43 @@ import SwiftUI
 
 @main
 struct ScanFlowApp: App {
-  private static let inMemoryAppStorageKey = "scanflow.usingInMemoryStore"
+    private static let inMemoryAppStorageKey = "scanflow.usingInMemoryStore"
 
-  init() {
-    let queue: DatabaseQueue
-    do {
-      queue = try AppDatabase.makeDatabaseQueue()
-      UserDefaults.standard.set(false, forKey: Self.inMemoryAppStorageKey)
-    } catch {
-      AppLog.databaseDiskOpenFailed(error)
-      do {
-        queue = try AppDatabase.makeInMemoryDatabaseQueue()
-        UserDefaults.standard.set(true, forKey: Self.inMemoryAppStorageKey)
-        AppLog.databaseUsingInMemoryOnly()
-      } catch {
-        AppLog.databaseInMemoryOpenFailed(error)
-        fatalError("ScanFlow could not open local storage. \(error)")
-      }
+    init() {
+        loadRocketSimConnect()
+        let queue: DatabaseQueue
+        do {
+            queue = try AppDatabase.makeDatabaseQueue()
+            UserDefaults.standard.set(false, forKey: Self.inMemoryAppStorageKey)
+        } catch {
+            AppLog.databaseDiskOpenFailed(error)
+            do {
+                queue = try AppDatabase.makeInMemoryDatabaseQueue()
+                UserDefaults.standard.set(true, forKey: Self.inMemoryAppStorageKey)
+                AppLog.databaseUsingInMemoryOnly()
+            } catch {
+                AppLog.databaseInMemoryOpenFailed(error)
+                fatalError("ScanFlow could not open local storage. \(error)")
+            }
+        }
+        prepareDependencies {
+            $0.defaultDatabase = queue
+        }
     }
-    prepareDependencies {
-      $0.defaultDatabase = queue
-    }
-  }
 
-  var body: some Scene {
-    WindowGroup {
-      MainTabView()
+    private func loadRocketSimConnect() {
+        #if DEBUG
+            guard Bundle(path: "/Applications/RocketSim.app/Contents/Frameworks/RocketSimConnectLinker.nocache.framework")?.load() == true else {
+                print("Failed to load linker framework")
+                return
+            }
+            print("RocketSim Connect successfully linked")
+        #endif
     }
-  }
+
+    var body: some Scene {
+        WindowGroup {
+            MainTabView()
+        }
+    }
 }
